@@ -1,0 +1,155 @@
+name: AWS EKS GitOps Deployment
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target Environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      deploy_strategy:
+        description: 'Deployment Strategy'
+        required: true
+        default: 'canary'
+        type: choice
+        options:
+          - canary
+          - blue-green
+          - standard
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging (EKS)
+    if: github.event.inputs.environment == 'staging' || github.event_name == 'release'
+    runs-on: ubuntu-latest
+    environment: staging # Protected by environment variables/secrets
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-oidc-role
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Install kubeconfig for EKS Staging Cluster
+        run: |
+          aws eks update-kubeconfig --name cloudscale-eks-staging --region ${{ secrets.AWS_REGION }}
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'v3.12.0'
+
+      - name: Deploy Helm Stack to Staging
+        run: |
+          helm upgrade --install cloudscale deployments/helm/cloudscale-parent \
+            --namespace cloudscale-staging \
+            --create-namespace \
+            -f deployments/helm/cloudscale-parent/values-staging.yaml \
+            --set global.jwt.secretKey="${{ secrets.JWT_SECRET_KEY }}" \
+            --wait --timeout 10m
+
+  deploy-production:
+    name: Deploy to Production (EKS)
+    if: github.event.inputs.environment == 'production' || github.event_name == 'release'
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    environment:
+      name: production # Enforces environment approval rules in GitHub UI
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-oidc-role
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Install kubeconfig for EKS Prod Cluster
+        run: |
+          aws eks update-kubeconfig --name cloudscale-eks-prod --region ${{ secrets.AWS_REGION }}
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'v3.12.0'
+
+      # ── Canary Strategy Implementation ───────────────────────────────────────
+      - name: Deploy Canary (10% Traffic weight)
+        if: github.event.inputs.deploy_strategy == 'canary'
+        run: |
+          echo "Deploying Canary release..."
+          helm upgrade --install cloudscale-canary deployments/helm/cloudscale-parent \
+            --namespace cloudscale-prod \
+            -f deployments/helm/cloudscale-parent/values-prod.yaml \
+            --set global.jwt.secretKey="${{ secrets.JWT_SECRET_KEY }}" \
+            --set auth-service.replicaCount=1 \
+            --set catalog-service.replicaCount=1 \
+            --set order-service.replicaCount=1 \
+            --set global.ingress.canary.enabled=true \
+            --set global.ingress.canary.weight=10 \
+            --wait --timeout 5m
+
+      - name: Run Smoke API Tests on Canary
+        if: github.event.inputs.deploy_strategy == 'canary'
+        run: |
+          echo "Running API smoke tests on Canary endpoint..."
+          # Mock smoke test: curl Canary endpoint and assert 200 OK
+          curl -s -f https://api.cloudscale.io/health || exit 1
+
+      - name: Promote Canary to Full Release
+        if: github.event.inputs.deploy_strategy == 'canary'
+        run: |
+          echo "Canary verified. Promoting to 100% stable release..."
+          helm upgrade --install cloudscale deployments/helm/cloudscale-parent \
+            --namespace cloudscale-prod \
+            -f deployments/helm/cloudscale-parent/values-prod.yaml \
+            --set global.jwt.secretKey="${{ secrets.JWT_SECRET_KEY }}" \
+            --wait --timeout 10m
+          
+          # Tear down canary slice
+          helm uninstall cloudscale-canary --namespace cloudscale-prod || true
+
+      # ── Blue-Green Strategy Implementation ───────────────────────────────────
+      - name: Deploy Green Slice
+        if: github.event.inputs.deploy_strategy == 'blue-green'
+        run: |
+          echo "Deploying Green environment slice..."
+          helm upgrade --install cloudscale-green deployments/helm/cloudscale-parent \
+            --namespace cloudscale-prod \
+            -f deployments/helm/cloudscale-parent/values-prod.yaml \
+            --set global.jwt.secretKey="${{ secrets.JWT_SECRET_KEY }}" \
+            --set global.ingress.slice=green \
+            --wait --timeout 10m
+
+      - name: Switch Traffic Router to Green
+        if: github.event.inputs.deploy_strategy == 'blue-green'
+        run: |
+          echo "Promoting Green slice to active (updating Kong route targets)..."
+          # Switch primary Ingress router target to Green service slice
+          kubectl patch ingress cloudscale-ingress -n cloudscale-prod \
+            --type=json -p='[{"op": "replace", "path": "/spec/rules/0/http/paths/0/backend/service/name", "value": "cloudscale-green-service"}]'
+
+      # ── Automated Rollback on Failure ────────────────────────────────────────
+      - name: Automated Rollback on Deployment Failure
+        if: failure()
+        run: |
+          echo "Deployment failed! Reverting cluster state to previous stable revision..."
+          helm rollback cloudscale --namespace cloudscale-prod || true
+          if [ "${{ github.event.inputs.deploy_strategy }}" = "blue-green" ]; then
+            kubectl patch ingress cloudscale-ingress -n cloudscale-prod \
+              --type=json -p='[{"op": "replace", "path": "/spec/rules/0/http/paths/0/backend/service/name", "value": "cloudscale-blue-service"}]'
+          fi

@@ -1,0 +1,35 @@
+_format_version: "3.0"
+_transform: true
+
+services:
+  - name: auth-service
+    url: http://auth-service:8000
+    routes:
+      - name: auth-route
+        paths:
+          - /api/v1/auth
+        strip_path: false
+
+  - name: catalog-service
+    url: http://catalog-service:8000
+    routes:
+      - name: catalog-route
+        paths:
+          - /api/v1/products
+        strip_path: false
+
+  - name: inventory-service
+    url: http://inventory-service:8000
+    routes:
+      - name: inventory-route
+        paths:
+          - /api/v1/inventory
+        strip_path: false
+
+  - name: order-service
+    url: http://order-service:8000
+    routes:
+      - name: order-route
+        paths:
+          - /api/v1/orders
+        strip_path: false

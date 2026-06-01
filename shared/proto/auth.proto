@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package cloudscale.auth;
+
+option java_package = "com.cloudscale.auth";
+
+// Service for validating JWT tokens and resolving user identity.
+// Used by internal services (e.g., Order Service) to verify user claims
+// without coupling to the Auth Service's database.
+service AuthService {
+  // Validates an access token and returns user claims.
+  rpc ValidateToken (ValidateTokenRequest) returns (ValidateTokenResponse);
+
+  // Retrieves user profile information by user ID.
+  rpc GetUserInfo (GetUserInfoRequest) returns (GetUserInfoResponse);
+}
+
+message ValidateTokenRequest {
+  string access_token = 1;
+}
+
+message ValidateTokenResponse {
+  bool valid = 1;
+  string user_id = 2;
+  string email = 3;
+  string role = 4;
+}
+
+message GetUserInfoRequest {
+  string user_id = 1;
+}
+
+message GetUserInfoResponse {
+  string user_id = 1;
+  string email = 2;
+  string first_name = 3;
+  string last_name = 4;
+  string role = 5;
+}

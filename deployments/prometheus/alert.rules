@@ -1,0 +1,47 @@
+groups:
+  - name: cloudscale_alerts
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Microservice availability failure"
+          description: "Microservice {{ $labels.job }} is unreachable for more than 30 seconds."
+
+      - alert: HighRequestLatency
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service)) > 0.5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API request latency detected"
+          description: "p95 latency of HTTP requests for service {{ $labels.service }} exceeds 500ms."
+
+      - alert: HighErrorRate
+        expr: sum(rate(http_request_errors_total[5m])) by (service) / sum(rate(http_requests_total[5m])) by (service) * 100 > 5
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rates detected"
+          description: "HTTP 5xx rate for service {{ $labels.service }} has exceeded 5%."
+
+      - alert: DatabasePoolExhaustion
+        expr: db_connections_checked_out / db_connection_pool_size * 100 > 90
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Database connection pool near exhaustion"
+          description: "Service {{ $labels.service }} is utilizing over 90% of its database connection pool size."
+
+      - alert: KafkaConsumerLagHigh
+        expr: kafka_consumergroup_lag > 100
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High consumer group lag detected"
+          description: "Kafka consumer group {{ $labels.group }} on topic {{ $labels.topic }} has lag exceeding 100 messages."

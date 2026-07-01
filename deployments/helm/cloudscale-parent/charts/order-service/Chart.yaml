@@ -1,0 +1,6 @@
+apiVersion: v2
+name: order-service
+description: CloudScale Commerce — Order Coordinator & Checkout Service
+type: application
+version: 1.0.0
+appVersion: "1.0.0"

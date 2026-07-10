@@ -15,7 +15,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-python: '3.12'
+          python-version: '3.12'
           cache: 'pip'
 
       - name: Install dependencies
@@ -30,7 +30,7 @@ jobs:
         run: black --check .
 
   test-services:
-    name: Test Suite ({{ matrix.service }})
+    name: Test Suite (${{ matrix.service }})
     needs: lint-and-format
     runs-on: ubuntu-latest
     strategy:

@@ -23,7 +23,7 @@ jobs:
         run: pip install bandit
 
       - name: Run Bandit
-        run: bandit -r shared/ services/ -ll -x **/tests/**
+        run: bandit -r shared/ services/ -ll --exclude '*/tests/*'
 
   helm-validation:
     name: Helm Chart & Manifest Validation

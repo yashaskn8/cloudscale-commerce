@@ -2,7 +2,8 @@ name: Release & Container Publishing
 
 on:
   push:
-    branches: [ main ]
+    tags:
+      - 'v*'
 
 permissions:
   id-token: write # Required for AWS OIDC authentication
@@ -29,7 +30,7 @@ jobs:
           DEFAULT_BUMP: patch
 
   build-and-push:
-    name: Build & Push ({{ matrix.service }})
+    name: Build & Push (${{ matrix.service }})
     needs: semantic-version
     runs-on: ubuntu-latest
     strategy:

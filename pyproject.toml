@@ -1,6 +1,14 @@
 [tool.ruff]
 target-version = "py312"
 line-length = 120
+exclude = [
+    "shared/python/cloudscale_shared/grpc",
+    "**/alembic/**",
+    ".venv",
+    "venv",
+    "node_modules",
+    "frontend",
+]
 select = [
     "E",   # pycodestyle errors
     "W",   # pycodestyle warnings
@@ -26,6 +34,9 @@ ignore = [
 [tool.black]
 target-version = ["py312"]
 line-length = 120
+exclude = '''
+/(shared/python/cloudscale_shared/grpc|.*/alembic|.venv|venv|node_modules|frontend)/
+'''
 
 [tool.mypy]
 python_version = "3.12"

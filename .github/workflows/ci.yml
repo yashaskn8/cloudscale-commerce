@@ -25,10 +25,10 @@ jobs:
         pip install ruff black
 
     - name: Run Ruff Linter
-      run: ruff check .
+      run: ruff check . --exclude 'shared/python/cloudscale_shared/grpc/*' --exclude '*/alembic/*'
 
     - name: Run Black Formatter Check
-      run: black --check .
+      run: black --check . --exclude '/(shared/python/cloudscale_shared/grpc|.*/alembic)/'
 
     - name: Install Shared Package & Service Dependencies
       run: |

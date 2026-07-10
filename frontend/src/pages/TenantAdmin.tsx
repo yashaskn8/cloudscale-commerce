@@ -26,6 +26,7 @@ const PLANS = [
     icon: Zap,
     color: "from-gray-500 to-gray-600",
     badge: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300",
+    popular: false,
     features: [
       "Up to 10 products",
       "Up to 15 orders/month",
@@ -60,6 +61,7 @@ const PLANS = [
     icon: Crown,
     color: "from-amber-500 to-orange-600",
     badge: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+    popular: false,
     features: [
       "Up to 10,000 products",
       "Up to 20,000 orders/month",

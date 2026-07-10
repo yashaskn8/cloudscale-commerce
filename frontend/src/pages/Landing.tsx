@@ -1,8 +1,8 @@
 import React from "react";
 import { Link } from "react-router";
 import { motion } from "framer-motion";
+import type { Variants } from "framer-motion";
 import {
-  Zap,
   Shield,
   ArrowRight,
   Sparkles,
@@ -11,20 +11,19 @@ import {
   Activity,
   Cpu,
   Workflow,
-  Globe,
 } from "lucide-react";
 
 // ── Animation Configs ─────────────────────────────────────────────────────────
-const fadeUp = {
+const fadeUp: Variants = {
   hidden: { opacity: 0, y: 30 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.8, ease: [0.2, 0.8, 0.2, 1] },
+    transition: { duration: 0.8, ease: [0.2, 0.8, 0.2, 1] as [number, number, number, number] },
   },
 };
 
-const staggerContainer = {
+const staggerContainer: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -34,7 +33,7 @@ const staggerContainer = {
   },
 };
 
-const floatAnimation = {
+const floatAnimation: Variants = {
   animate: {
     y: [0, -12, 0],
     transition: {

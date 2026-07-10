@@ -80,14 +80,7 @@ export const ShowcasePanel: React.FC = () => {
         role: persona.role,
       });
 
-      addNotification({
-        id: `persona-${Date.now()}`,
-        title: "Demo Context Switched",
-        message: `Now viewing as ${persona.name} (${persona.role})`,
-        type: "info",
-        read: false,
-        timestamp: new Date().toISOString(),
-      });
+      addNotification("Demo Context Switched", `Now viewing as ${persona.name} (${persona.role})`, "system");
     },
     [addNotification]
   );
@@ -101,14 +94,7 @@ export const ShowcasePanel: React.FC = () => {
     // Simulate seeding delay
     await new Promise((r) => setTimeout(r, 1200));
 
-    addNotification({
-      id: `seed-${Date.now()}`,
-      title: "Demo Data Seeded",
-      message: "Sample products, orders, and inventory populated in demo-sandbox workspace",
-      type: "success",
-      read: false,
-      timestamp: new Date().toISOString(),
-    });
+    addNotification("Demo Data Seeded", "Sample products, orders, and inventory populated in demo-sandbox workspace", "system");
 
     setSeedingData(false);
   }, [addNotification, switchTenant, upgradePlan]);

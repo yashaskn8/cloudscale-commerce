@@ -1,6 +1,0 @@
-apiVersion: v2
-name: notification-service
-description: CloudScale Commerce — Event-Driven Customer Notification Service
-type: application
-version: 1.0.0
-appVersion: "1.0.0"

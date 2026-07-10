@@ -1,4 +1,4 @@
-FROM python:3.12-slim AS builder
+FROM python:3.14-slim AS builder
 WORKDIR /build
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*
 COPY shared/python/pyproject.toml /build/shared/python/pyproject.toml
@@ -10,7 +10,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r /build/requirements.txt && \
     pip install --no-cache-dir /build/shared/python
 
-FROM python:3.12-slim AS runner
+FROM python:3.14-slim AS runner
 LABEL org.opencontainers.image.title="cloudscale-notification-service"
 WORKDIR /app
 COPY --from=builder /opt/venv /opt/venv

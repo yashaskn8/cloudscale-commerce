@@ -1,7 +1,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 # Stage 1: Build dependencies in a virtual environment
 # ──────────────────────────────────────────────────────────────────────────────
-FROM python:3.12-slim AS builder
+FROM python:3.14-slim AS builder
 
 WORKDIR /build
 
@@ -24,7 +24,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # ──────────────────────────────────────────────────────────────────────────────
 # Stage 2: Production runtime image (minimal attack surface)
 # ──────────────────────────────────────────────────────────────────────────────
-FROM python:3.12-slim AS runner
+FROM python:3.14-slim AS runner
 
 LABEL org.opencontainers.image.source="https://github.com/cloudscale/commerce"
 LABEL org.opencontainers.image.title="cloudscale-auth-service"

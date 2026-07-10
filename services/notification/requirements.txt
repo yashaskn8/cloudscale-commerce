@@ -1,2 +1,2 @@
-pydantic-settings>=2.0.0
+pydantic-settings>=2.14.2
 # To install shared libraries locally, run: pip install -e ../../shared/python

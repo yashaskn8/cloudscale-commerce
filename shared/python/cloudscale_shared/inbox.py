@@ -11,10 +11,10 @@ Usage in a service's models.py:
         __tablename__ = "inbox_messages"
 """
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import structlog
-from sqlalchemy import String, DateTime, select, func
+from sqlalchemy import DateTime, String, func, select
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
@@ -34,7 +34,7 @@ class InboxMixin:
     event_type: Mapped[str] = mapped_column(String(255), nullable=False)
     source_topic: Mapped[str] = mapped_column(String(255), nullable=False)
     processed_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
+        DateTime, default=lambda: datetime.now(UTC), nullable=False
     )
 
 

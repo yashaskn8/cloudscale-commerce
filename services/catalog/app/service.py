@@ -3,27 +3,26 @@
 Implements catalog management operations with a multi-layer Cache-Aside pattern (L1/L2)
 and Circuit Breakers to handle database degradation gracefully.
 """
-import json
 import uuid
-import structlog
-from redis.asyncio import Redis
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from cloudscale_shared import (
-    ConflictException,
-    NotFoundException,
-    ValidationException,
-    CircuitBreaker,
-    circuit_breaker,
-    retry_with_backoff,
-    cache_aside,
-    get_current_tenant,
-)
+import structlog
 from app.config import settings
 from app.models import Product
 from app.repository import ProductRepository
 from app.schemas import ProductCreate, ProductResponse
-from cloudscale_shared.query import PageParams, Page
+from cloudscale_shared import (
+    CircuitBreaker,
+    ConflictException,
+    NotFoundException,
+    ValidationException,
+    cache_aside,
+    circuit_breaker,
+    get_current_tenant,
+    retry_with_backoff,
+)
+from cloudscale_shared.query import Page, PageParams
+from redis.asyncio import Redis
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger()
 
@@ -46,16 +45,16 @@ class CatalogService:
     async def create_product(self, payload: ProductCreate) -> Product:
         """Creates a new catalog product with quota checks, then invalidates paginated caches."""
         tenant_id = get_current_tenant()
-        
+
         plan_tier = "free"
         if self.redis:
             # Resolve active subscription limits from Redis plan context
             plan_raw = await self.redis.get(f"tenant:plan:{tenant_id}")
             plan_tier = plan_raw if plan_raw else "free"
-        
+
         limits = {"free": 10, "growth": 100, "enterprise": 10000}
         max_limit = limits.get(plan_tier, 10)
-        
+
         current_count = await self.repo.count_tenant_products()
         if current_count >= max_limit:
             logger.warn("Product registration failed - Quota limit exceeded", tenant_id=tenant_id, plan_tier=plan_tier)
@@ -86,7 +85,7 @@ class CatalogService:
         """Retrieves a product by ID, checking L1/L2 cache and circuit breaking database."""
         # Wrap database fetch with cache_aside using our shared wrapper
         # We define a helper that operates inside the cache scope
-        
+
         @cache_aside(key_prefix="catalog_product", ttl_seconds=settings.PRODUCT_CACHE_TTL_SECONDS)
         async def _get_cached_product(pid_str: str) -> dict:
             product = await self._fetch_product_from_db(uuid.UUID(pid_str))
@@ -97,7 +96,7 @@ class CatalogService:
 
     async def list_products(self, params: PageParams) -> Page[ProductResponse]:
         """Lists active products with pagination, checking cache and database."""
-        
+
         @cache_aside(key_prefix="catalog_list", ttl_seconds=60)
         async def _get_cached_list(tenant_id: str, page: int, size: int) -> dict:
             items, total = await self._fetch_list_from_db(PageParams(page=page, size=size))

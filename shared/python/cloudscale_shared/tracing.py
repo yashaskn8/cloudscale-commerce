@@ -9,15 +9,13 @@ Provides:
 import os
 from typing import Any
 
+import structlog
 from opentelemetry import trace
 from opentelemetry.context import Context
-from opentelemetry.sdk.resources import Resource, SERVICE_NAME
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor
-from opentelemetry.trace import StatusCode, Span
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
-
-import structlog
 
 logger = structlog.get_logger()
 

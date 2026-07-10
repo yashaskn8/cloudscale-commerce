@@ -8,8 +8,9 @@ Provides:
 """
 import logging
 import sys
-import structlog
 from typing import Any
+
+import structlog
 
 
 def _add_trace_context(

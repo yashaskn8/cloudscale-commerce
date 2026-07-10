@@ -12,8 +12,9 @@ Provides:
 import asyncio
 import json
 import time
+from collections.abc import Callable, Coroutine
 from functools import wraps
-from typing import Any, Callable, Coroutine, TypeVar
+from typing import Any, TypeVar
 
 import structlog
 from prometheus_client import Counter
@@ -177,7 +178,7 @@ async def invalidate_cache_key(key_prefix: str, func_name: str, args_identity: s
     """Evicts a specific cache key from both local and distributed cache levels."""
     cache_key = f"{CACHE_VERSION}:{key_prefix}:{func_name}:{args_identity}"
     l1_cache.delete(cache_key)
-    
+
     from cloudscale_shared.database import redis_manager
     if redis_manager:
         try:

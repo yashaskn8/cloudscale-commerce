@@ -9,22 +9,20 @@ Provides:
 - Account lockout tracking
 - Audit logging helpers
 """
-import time
 import uuid
-from datetime import datetime, timedelta, timezone
-from typing import Annotated, Sequence
+from datetime import UTC, datetime, timedelta
 
 import jwt
 import structlog
 from argon2 import PasswordHasher
-from argon2.exceptions import VerifyMismatchError, InvalidHashError
-from fastapi import Depends, Header, Request, Response
+from argon2.exceptions import InvalidHashError, VerifyMismatchError
+from fastapi import Header, Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from cloudscale_shared.exceptions import (
-    UnauthorizedException,
-    ForbiddenException,
     CloudScaleException,
+    ForbiddenException,
+    UnauthorizedException,
 )
 
 logger = structlog.get_logger()
@@ -113,7 +111,7 @@ def create_token_pair(
     refresh_expire_days: int = 7,
 ) -> tuple[str, str]:
     """Creates an access/refresh JWT token pair."""
-    utc_now = datetime.now(timezone.utc)
+    utc_now = datetime.now(UTC)
     jti_access = str(uuid.uuid4())
     jti_refresh = str(uuid.uuid4())
 

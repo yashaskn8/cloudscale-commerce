@@ -2,8 +2,8 @@
 
 Defines the transactional Inbox table for exactly-once notification delivery.
 """
-from sqlalchemy.orm import DeclarativeBase
 from cloudscale_shared.inbox import InboxMixin
+from sqlalchemy.orm import DeclarativeBase
 
 
 class Base(DeclarativeBase):

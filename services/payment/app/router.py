@@ -5,19 +5,18 @@ Provides subscription management, invoice history, entitlement checking,
 and a production-grade Stripe webhook receiver with HMAC-SHA256 signature
 verification and replay attack protection.
 """
-import uuid
-import hmac
 import hashlib
-import time
+import hmac
 import json
+import time
 from decimal import Decimal
-from fastapi import APIRouter, Depends, Query, status, HTTPException, Request
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-import structlog
 
-from cloudscale_shared import get_db_session, get_current_tenant
-from app.models import Subscription, Invoice
+import structlog
+from app.models import Invoice, Subscription
+from cloudscale_shared import get_current_tenant, get_db_session
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger()
 
@@ -98,7 +97,7 @@ async def get_active_subscription(db: AsyncSession = Depends(get_db_session)):
     tenant = get_current_tenant()
     res = await db.execute(select(Subscription).where(Subscription.tenant_id == tenant))
     sub = res.scalar_one_or_none()
-    
+
     if not sub:
         sub = Subscription(tenant_id=tenant, plan_tier="free", status="active")
         db.add(sub)
@@ -162,7 +161,7 @@ async def get_entitlements(db: AsyncSession = Depends(get_db_session)):
     res = await db.execute(select(Subscription).where(Subscription.tenant_id == tenant))
     sub = res.scalar_one_or_none()
     tier = sub.plan_tier if sub else "free"
-    
+
     return {
         "tenant_id": tenant,
         "plan_tier": tier,

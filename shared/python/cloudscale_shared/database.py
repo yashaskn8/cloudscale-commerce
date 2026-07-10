@@ -2,15 +2,15 @@ import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
-from sqlalchemy import text, select
+
+import structlog
+from prometheus_client import Gauge
+from redis.asyncio import ConnectionPool, Redis
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
-from redis.asyncio import Redis, ConnectionPool
-import structlog
-from prometheus_client import Gauge
 
 logger = structlog.get_logger()
 
@@ -34,7 +34,7 @@ class DatabaseSessionManager:
     ):
         self.service_name = service_name
         engine_kwargs = engine_kwargs or {}
-        
+
         # High-performance enterprise production engine parameters
         engine_kwargs.setdefault("pool_pre_ping", True)
         if "sqlite" not in write_url:
@@ -208,13 +208,13 @@ async def cursor_paginate(
     # Order and limit (+1 to detect if next page exists)
     order_expr = column.desc() if descending else column.asc()
     stmt = stmt.order_by(order_expr).limit(limit + 1)
-    
+
     res = await session.execute(stmt)
     items = list(res.scalars().all())
-    
+
     next_cursor = None
     if len(items) > limit:
         next_cursor = getattr(items[limit - 1], column.name)
         items = items[:limit]
-        
+
     return items, next_cursor

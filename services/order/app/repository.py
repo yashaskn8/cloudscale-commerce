@@ -3,12 +3,12 @@
 Handles database querying and state persistence for Order aggregates.
 """
 import uuid
-from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from cloudscale_shared.repository import SQLAlchemyRepository
-from cloudscale_shared import get_current_tenant
 from app.models import Order
+from cloudscale_shared import get_current_tenant
+from cloudscale_shared.repository import SQLAlchemyRepository
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class OrderRepository(SQLAlchemyRepository[Order]):

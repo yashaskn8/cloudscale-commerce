@@ -9,19 +9,19 @@ Provides:
 """
 import asyncio
 import time
+from collections.abc import Callable, Coroutine
 from enum import Enum
 from functools import wraps
-from typing import Any, Callable, Coroutine, TypeVar
+from typing import Any, TypeVar
 
-from tenacity import (
-    retry,
-    stop_after_attempt,
-    wait_exponential_jitter,
-    retry_if_exception_type,
-    before_sleep_log,
-)
 import structlog
 from prometheus_client import Counter, Gauge
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential_jitter,
+)
 
 logger = structlog.get_logger()
 
@@ -130,11 +130,11 @@ class CircuitBreaker:
         self.name = name
         self.failure_threshold = failure_threshold
         self.recovery_timeout_seconds = recovery_timeout_seconds
-        
+
         self.state = CircuitState.CLOSED
         self.failure_count = 0
         self.last_state_change = time.time()
-        
+
         CIRCUIT_BREAKER_STATE.labels(operation=name).set(CircuitState.CLOSED.value)
 
     def transition_to(self, new_state: CircuitState) -> None:
@@ -183,7 +183,7 @@ def circuit_breaker(
                 raise CircuitBreakerOpenException(
                     f"Circuit breaker {breaker.name} is open. Request rejected."
                 )
-            
+
             try:
                 result = await func(*args, **kwargs)
                 breaker.record_success()
@@ -211,7 +211,7 @@ class Bulkhead:
         self.name = name
         self.max_concurrent = max_concurrent
         self.semaphore = asyncio.Semaphore(max_concurrent)
-        
+
         BULKHEAD_LIMITS.labels(operation=name).set(max_concurrent)
 
     async def execute(self, coro: Coroutine[Any, Any, T]) -> T:
@@ -257,7 +257,7 @@ def with_timeout(seconds: float) -> Callable[[Callable[..., Coroutine[Any, Any, 
         async def wrapper(*args: Any, **kwargs: Any) -> T:
             try:
                 return await asyncio.wait_for(func(*args, **kwargs), timeout=seconds)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.error(
                     "Operation timed out",
                     func=func.__name__,

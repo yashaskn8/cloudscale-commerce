@@ -8,18 +8,16 @@ Exposes endpoints for:
 - Current user profile retrieval
 - Admin user listing (RBAC-protected)
 """
-import uuid
-from fastapi import APIRouter, Depends, Header, Query, Request, status
+import structlog
+from app.models import User
+from app.schemas import RefreshRequest, TokenResponse, UserLogin, UserRegister, UserResponse
+from app.service import AuthService
+from cloudscale_shared import get_db_session
+from cloudscale_shared.query import Page, PageParams
+from cloudscale_shared.security import RateLimiter, RoleChecker
+from fastapi import APIRouter, Depends, Query, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
-import structlog
-
-from cloudscale_shared import get_db_session
-from cloudscale_shared.query import PageParams, Page
-from cloudscale_shared.security import RoleChecker, RateLimiter
-from app.models import User
-from app.schemas import UserRegister, UserLogin, UserResponse, TokenResponse, RefreshRequest
-from app.service import AuthService
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/api/v1/auth", tags=["Authentication"])

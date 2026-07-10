@@ -1,7 +1,9 @@
 import uuid
 from datetime import datetime
 from decimal import Decimal
+
 from pydantic import BaseModel, Field
+
 
 class OrderItemCreate(BaseModel):
     product_id: uuid.UUID

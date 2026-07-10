@@ -1,10 +1,10 @@
 import uuid
+
 import pytest
+from app.consumers import handle_event
+from app.models import Inventory, OutboxMessage
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.models import Inventory, OutboxMessage
-from app.consumers import handle_event
 
 
 @pytest.mark.asyncio

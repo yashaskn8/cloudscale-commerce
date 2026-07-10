@@ -1,9 +1,10 @@
-import pytest
 from decimal import Decimal
-from sqlalchemy.ext.asyncio import AsyncSession
+
+import pytest
 from app.models import Product
 from app.repository import ProductRepository
 from cloudscale_shared.query import PageParams
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @pytest.mark.asyncio

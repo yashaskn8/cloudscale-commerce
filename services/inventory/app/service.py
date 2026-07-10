@@ -4,15 +4,15 @@ Coordinates stock queries and updates.
 Uses distributed locking (Redis Redlock-like) to protect critical restock blocks.
 """
 import uuid
-import structlog
-from redis.asyncio import Redis
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from cloudscale_shared import NotFoundException
+import structlog
+from app.locking import acquire_lock
 from app.models import Inventory
 from app.repository import InventoryRepository
 from app.schemas import RestockRequest
-from app.locking import acquire_lock
+from cloudscale_shared import NotFoundException
+from redis.asyncio import Redis
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger()
 LOCK_KEY_PREFIX = "inventory:lock:"

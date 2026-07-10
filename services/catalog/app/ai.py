@@ -23,20 +23,20 @@ Why not use sentence-transformers directly?
     architectural pattern (embed → index → search → cache) without the
     infrastructure overhead. The swap to a real model is a config change.
 """
+import hashlib
 import json
 import math
 import uuid
-import hashlib
-from typing import Any
 from collections import Counter
-import structlog
-from prometheus_client import Counter as PromCounter, Histogram
-from redis.asyncio import Redis
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
+import structlog
 from app.models import Product
 from app.schemas import ProductResponse
+from prometheus_client import Counter as PromCounter
+from prometheus_client import Histogram
+from redis.asyncio import Redis
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger()
 
@@ -193,7 +193,7 @@ class EmbeddingEngine:
 
             # Hash projection: map token to multiple dimension indices
             # Uses MD5 for deterministic, uniform distribution across dimensions
-            token_hash = hashlib.md5(token.encode()).hexdigest()
+            token_hash = hashlib.md5(token.encode(), usedforsecurity=False).hexdigest()
             num_projections = 3  # Each token activates 3 dimensions
             for i in range(num_projections):
                 segment = token_hash[i * 4:(i + 1) * 4]
@@ -424,7 +424,7 @@ class AIRecommendationService:
           4. Filter by minimum similarity threshold
           5. Return ranked results
         """
-        cache_key = f"ai:search:{hashlib.md5(query.encode()).hexdigest()}:{limit}"
+        cache_key = f"ai:search:{hashlib.md5(query.encode(), usedforsecurity=False).hexdigest()}:{limit}"
 
         # Check cache
         try:

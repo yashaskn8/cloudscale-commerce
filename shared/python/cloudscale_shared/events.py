@@ -5,12 +5,13 @@ built-in retry topic routing and Dead Letter Queue (DLQ) support.
 """
 import json
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Callable, Awaitable
+from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime
+from typing import Any
 
-from pydantic import BaseModel, Field
-from aiokafka import AIOKafkaProducer, AIOKafkaConsumer
 import structlog
+from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
+from pydantic import BaseModel, Field
 
 logger = structlog.get_logger()
 
@@ -24,7 +25,7 @@ class Event(BaseModel):
     event_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     event_type: str
     timestamp: str = Field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+        default_factory=lambda: datetime.now(UTC).isoformat()
     )
     correlation_id: str
     payload: dict[str, Any]
@@ -72,7 +73,7 @@ class KafkaProducerWrapper:
                 event_type=event.event_type,
                 event_id=event.event_id,
             )
-            
+
             value = event.model_dump()
             try:
                 from cloudscale_shared.tracing import inject_trace_into_event
@@ -254,7 +255,7 @@ class KafkaConsumerWrapper:
                 "original_offset": msg.offset,
                 "error": str(exception),
                 "payload": event_data,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
             dlq_event = Event(
                 event_type="DLQMessage",

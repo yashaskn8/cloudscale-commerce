@@ -2,15 +2,14 @@
 
 Handles database querying and state changes for Product aggregates.
 """
-import uuid
-from typing import Sequence
-from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import AsyncSession
+from collections.abc import Sequence
 
-from cloudscale_shared.repository import SQLAlchemyRepository
-from cloudscale_shared.query import PageParams
-from cloudscale_shared import get_current_tenant
 from app.models import Product
+from cloudscale_shared import get_current_tenant
+from cloudscale_shared.query import PageParams
+from cloudscale_shared.repository import SQLAlchemyRepository
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class ProductRepository(SQLAlchemyRepository[Product]):
@@ -32,7 +31,7 @@ class ProductRepository(SQLAlchemyRepository[Product]):
     async def list_active_paginated(self, params: PageParams) -> tuple[Sequence[Product], int]:
         """Retrieves a paginated list of active products and total count under current tenant."""
         tenant = get_current_tenant()
-        
+
         # Count active products in tenant
         count_stmt = (
             select(func.count())

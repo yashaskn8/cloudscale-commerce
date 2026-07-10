@@ -1,20 +1,20 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
-import structlog
 
-from cloudscale_shared import (
-    setup_logging,
-    setup_tracing,
-    CorrelationIdMiddleware,
-    init_db,
-    init_redis,
-    setup_exception_handlers,
-    setup_metrics,
-    SecurityHeadersMiddleware,
-    register_health_routes,
-)
+import structlog
 from app.config import settings
 from app.router import router
+from cloudscale_shared import (
+    CorrelationIdMiddleware,
+    SecurityHeadersMiddleware,
+    init_db,
+    init_redis,
+    register_health_routes,
+    setup_exception_handlers,
+    setup_logging,
+    setup_metrics,
+    setup_tracing,
+)
+from fastapi import FastAPI
 
 logger = structlog.get_logger()
 

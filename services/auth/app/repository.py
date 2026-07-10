@@ -3,14 +3,13 @@
 Encapsulates all database access operations for the User aggregate root.
 Extends the shared SQLAlchemyRepository with domain-specific query methods.
 """
-import uuid
-from typing import Sequence
-from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import AsyncSession
+from collections.abc import Sequence
 
-from cloudscale_shared.repository import SQLAlchemyRepository
-from cloudscale_shared.query import PageParams
 from app.models import User
+from cloudscale_shared.query import PageParams
+from cloudscale_shared.repository import SQLAlchemyRepository
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class UserRepository(SQLAlchemyRepository[User]):

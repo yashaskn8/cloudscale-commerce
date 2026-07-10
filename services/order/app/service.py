@@ -4,17 +4,17 @@ Coordinates Order aggregates, validates checkout commands, implements idempotenc
 and writes Saga initiation events to the transactional outbox (not directly to Kafka).
 """
 import uuid
-import structlog
-from redis.asyncio import Redis
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from cloudscale_shared import NotFoundException, CloudScaleException, ValidationException, get_current_tenant
-from cloudscale_shared.events import Event
-from cloudscale_shared.outbox import write_outbox
+import structlog
+from app.config import settings
 from app.models import Order, OrderItem, OrderStatus, OutboxMessage
 from app.repository import OrderRepository
 from app.schemas import OrderCreate
-from app.config import settings
+from cloudscale_shared import NotFoundException, ValidationException, get_current_tenant
+from cloudscale_shared.events import Event
+from cloudscale_shared.outbox import write_outbox
+from redis.asyncio import Redis
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger()
 

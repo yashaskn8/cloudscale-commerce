@@ -4,15 +4,15 @@ Exposes endpoints to query stock and restock products.
 Integrates dependency-injected InventoryService.
 """
 import uuid
-from fastapi import APIRouter, Depends, status
-from redis.asyncio import Redis
-from sqlalchemy.ext.asyncio import AsyncSession
-import structlog
 
+import structlog
+from app.schemas import InventoryResponse, RestockRequest
+from app.service import InventoryService
 from cloudscale_shared import get_db_session, get_redis_client
 from cloudscale_shared.security import RoleChecker
-from app.schemas import RestockRequest, InventoryResponse
-from app.service import InventoryService
+from fastapi import APIRouter, Depends
+from redis.asyncio import Redis
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/api/v1/inventory", tags=["Inventory"])

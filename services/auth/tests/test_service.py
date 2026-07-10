@@ -1,9 +1,9 @@
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
+from app.schemas import UserLogin, UserRegister
+from app.service import AuthService
 from cloudscale_shared import ConflictException, UnauthorizedException, ValidationException
 from cloudscale_shared.security import verify_password
-from app.service import AuthService
-from app.schemas import UserRegister, UserLogin
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @pytest.mark.asyncio

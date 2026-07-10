@@ -1,11 +1,10 @@
 import pytest
-from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import FastAPI
-
 from app.main import app
 from app.router import get_auth_service
 from app.service import AuthService
+from fastapi import FastAPI
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @pytest.fixture

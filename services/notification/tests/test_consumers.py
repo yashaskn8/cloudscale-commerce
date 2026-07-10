@@ -1,16 +1,16 @@
 import uuid
+
 import pytest
+from app.consumers import handle_event
+from app.models import InboxMessage
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.models import InboxMessage
-from app.consumers import handle_event
 
 
 @pytest.mark.asyncio
 async def test_notification_delivery_and_deduplication(db_session: AsyncSession, monkeypatch):
     from unittest.mock import AsyncMock
-    
+
     # Mock order confirmation method
     mock_send = AsyncMock()
     monkeypatch.setattr("app.consumers.send_order_confirmation", mock_send)

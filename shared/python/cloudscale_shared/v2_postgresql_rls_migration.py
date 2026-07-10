@@ -22,8 +22,7 @@ Note: SQLite (used in tests) does not support RLS. These policies are
 PostgreSQL-specific and are validated via migration dry-run tests.
 """
 
-from typing import Sequence
-
+from collections.abc import Sequence
 
 # ── Tables requiring RLS ────────────────────────────────────────────────────────
 

@@ -1,11 +1,14 @@
 from abc import ABC, abstractmethod
-from typing import Self, Any
+from typing import Any, Self
+
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from cloudscale_shared.database import DatabaseSessionManager
+
 
 class AbstractUnitOfWork(ABC):
     """Abstract Context Manager for transaction tracking (Unit of Work)."""
-    
+
     async def __aenter__(self) -> Self:
         return self
 
@@ -27,7 +30,7 @@ class AbstractUnitOfWork(ABC):
 
 class SQLAlchemyUnitOfWork(AbstractUnitOfWork):
     """SQLAlchemy implementation of the Unit of Work Pattern."""
-    
+
     def __init__(self, session_manager: DatabaseSessionManager):
         self.session_manager = session_manager
         self.session: AsyncSession | None = None

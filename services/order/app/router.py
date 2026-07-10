@@ -4,14 +4,14 @@ Exposes endpoints to trigger order checkouts and query order state.
 Uses transactional outbox — no direct Kafka dependency in the HTTP path.
 """
 import uuid
+
+import structlog
+from app.schemas import OrderCreate, OrderResponse
+from app.service import OrderService
+from cloudscale_shared import ValidationException, get_db_session, get_redis_client
 from fastapi import APIRouter, Depends, Header, status
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
-import structlog
-
-from cloudscale_shared import get_db_session, get_redis_client, ValidationException
-from app.schemas import OrderCreate, OrderResponse
-from app.service import OrderService
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/api/v1/orders", tags=["Orders"])

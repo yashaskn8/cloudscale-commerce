@@ -1,5 +1,4 @@
-import uuid
-from locust import HttpUser, task, between
+from locust import HttpUser, between, task
 
 
 class CloudScaleUser(HttpUser):

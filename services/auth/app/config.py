@@ -1,10 +1,11 @@
 from pydantic_settings import BaseSettings
 
+
 class Settings(BaseSettings):
     SERVICE_NAME: str = "auth-service"
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/auth_db"
     REDIS_URL: str = "redis://localhost:6379/0"
-    
+
     JWT_SECRET_KEY: str = "supersecretkeyforcloudscalecommercejwtissuancechangeinprod"
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15

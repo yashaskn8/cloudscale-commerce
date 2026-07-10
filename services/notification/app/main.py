@@ -1,19 +1,19 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
-import structlog
 
-from cloudscale_shared import (
-    setup_logging,
-    setup_tracing,
-    CorrelationIdMiddleware,
-    init_db,
-    setup_exception_handlers,
-    setup_metrics,
-    SecurityHeadersMiddleware,
-    register_health_routes,
-)
+import structlog
 from app.config import settings
 from app.consumers import init_kafka, shutdown_kafka
+from cloudscale_shared import (
+    CorrelationIdMiddleware,
+    SecurityHeadersMiddleware,
+    init_db,
+    register_health_routes,
+    setup_exception_handlers,
+    setup_logging,
+    setup_metrics,
+    setup_tracing,
+)
+from fastapi import FastAPI
 
 logger = structlog.get_logger()
 
@@ -22,10 +22,10 @@ async def lifespan(app: FastAPI):
     # Initialize logging
     setup_logging(settings.SERVICE_NAME)
     setup_tracing(settings.SERVICE_NAME)
-    
+
     # Initialize Database for Inbox tracking
     init_db(settings.DATABASE_URL)
-    
+
     # Create DB schemas automatically
     from app.models import Base
     from cloudscale_shared.database import db_manager
@@ -33,16 +33,16 @@ async def lifespan(app: FastAPI):
         async with db_manager._engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         logger.info("Database tables initialized successfully.")
-    
+
     # Initialize Kafka consumer loop
     try:
         await init_kafka()
     except Exception as e:
         logger.error("Failed to start Kafka listeners.", error=str(e))
-        
+
     logger.info("Notification microservice initialized", service_name=settings.SERVICE_NAME)
     yield
-    
+
     # Clean up
     await shutdown_kafka()
     from cloudscale_shared.database import db_manager

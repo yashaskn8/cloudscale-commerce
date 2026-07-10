@@ -8,36 +8,35 @@ Implements:
 - Structured audit logging for security events
 """
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import structlog
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from cloudscale_shared import (
-    ConflictException,
-    UnauthorizedException,
-    NotFoundException,
-    ValidationException,
-)
-from cloudscale_shared.query import PageParams, Page
-from cloudscale_shared.security import (
-    hash_password,
-    verify_password,
-    password_needs_rehash,
-    validate_password_policy,
-    create_token_pair,
-    decode_token,
-    revoke_token,
-    is_token_revoked,
-    record_failed_login,
-    is_account_locked,
-    clear_failed_logins,
-    audit_log,
-)
 from app.config import settings
 from app.models import User
 from app.repository import UserRepository
-from app.schemas import UserRegister, UserLogin, UserResponse, TokenResponse
+from app.schemas import TokenResponse, UserLogin, UserRegister, UserResponse
+from cloudscale_shared import (
+    ConflictException,
+    NotFoundException,
+    UnauthorizedException,
+    ValidationException,
+)
+from cloudscale_shared.query import Page, PageParams
+from cloudscale_shared.security import (
+    audit_log,
+    clear_failed_logins,
+    create_token_pair,
+    decode_token,
+    hash_password,
+    is_account_locked,
+    is_token_revoked,
+    password_needs_rehash,
+    record_failed_login,
+    revoke_token,
+    validate_password_policy,
+    verify_password,
+)
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger()
 
@@ -156,7 +155,7 @@ class AuthService:
         # Revoke the old refresh token
         if self.redis and jti:
             exp = payload.get("exp", 0)
-            ttl = max(exp - int(datetime.now(timezone.utc).timestamp()), 1)
+            ttl = max(exp - int(datetime.now(UTC).timestamp()), 1)
             await revoke_token(self.redis, jti, ttl)
 
         # Issue fresh token pair
@@ -185,7 +184,7 @@ class AuthService:
         jti = payload.get("jti")
         if self.redis and jti:
             exp = payload.get("exp", 0)
-            ttl = max(exp - int(datetime.now(timezone.utc).timestamp()), 1)
+            ttl = max(exp - int(datetime.now(UTC).timestamp()), 1)
             await revoke_token(self.redis, jti, ttl)
 
         audit_log("UserLogout", user_id=payload.get("sub"))

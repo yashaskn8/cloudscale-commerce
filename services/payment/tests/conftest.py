@@ -1,12 +1,12 @@
-import pytest
-from typing import AsyncGenerator
-from sqlalchemy.pool import StaticPool
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from collections.abc import AsyncGenerator
 
-import cloudscale_shared.database
 import app.consumers
+import cloudscale_shared.database
+import pytest
 from app.models import Base
 from cloudscale_shared.database import DatabaseSessionManager
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import StaticPool
 
 
 @pytest.fixture(autouse=True)
@@ -14,12 +14,12 @@ async def configure_global_db_manager(test_session_manager):
     """Overrides the global db_manager and the local consumers db_manager reference."""
     original_shared_manager = cloudscale_shared.database.db_manager
     original_consumers_manager = app.consumers.db_manager
-    
+
     cloudscale_shared.database.db_manager = test_session_manager
     app.consumers.db_manager = test_session_manager
-    
+
     yield
-    
+
     cloudscale_shared.database.db_manager = original_shared_manager
     app.consumers.db_manager = original_consumers_manager
 

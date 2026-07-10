@@ -6,15 +6,14 @@ records transactions, and writes responses to the transactional outbox.
 import asyncio
 import uuid
 from typing import Any
-from sqlalchemy import select
-import structlog
 
-from cloudscale_shared.database import db_manager
-from cloudscale_shared.events import Event, KafkaProducerWrapper, KafkaConsumerWrapper
-from cloudscale_shared.inbox import inbox_already_processed, record_inbox
-from cloudscale_shared.outbox import write_outbox, OutboxWorker
+import structlog
 from app.config import settings
-from app.models import Payment, OutboxMessage, InboxMessage
+from app.models import InboxMessage, OutboxMessage, Payment
+from cloudscale_shared.database import db_manager
+from cloudscale_shared.events import Event, KafkaConsumerWrapper, KafkaProducerWrapper
+from cloudscale_shared.inbox import inbox_already_processed, record_inbox
+from cloudscale_shared.outbox import OutboxWorker, write_outbox
 
 logger = structlog.get_logger()
 producer: KafkaProducerWrapper | None = None
@@ -90,7 +89,7 @@ async def _process_payment(db, payload: dict[str, Any], correlation_id: str):
     """Charges user card. Triggers compensation flow on payment failure (quantity = 99)."""
     order_id = payload.get("order_id")
     items = payload.get("items", [])
-    
+
     # Calculate amount
     amount = sum(item.get("quantity", 0) * item.get("unit_price", 0.0) for item in items)
     logger.info("Processing card payment charge", order_id=order_id, amount=amount)
@@ -117,7 +116,7 @@ async def _process_payment(db, payload: dict[str, Any], correlation_id: str):
         )
     else:
         transaction_id = f"txn_{uuid.uuid4().hex[:16]}"
-        
+
         # Save payment record in DB
         payment = Payment(
             order_id=uuid.UUID(order_id),
@@ -126,9 +125,9 @@ async def _process_payment(db, payload: dict[str, Any], correlation_id: str):
             status="COMPLETED"
         )
         db.add(payment)
-        
+
         logger.info("Mock card payment completed successfully", order_id=order_id, txn_id=transaction_id)
-        
+
         success_event = Event(
             event_type="PaymentSuccessEvent",
             correlation_id=correlation_id,

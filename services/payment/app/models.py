@@ -5,12 +5,12 @@ Defines the Payment transaction record, Subscription models, Plans, Invoices, an
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from sqlalchemy import String, Numeric, DateTime, func, Boolean
+
+from cloudscale_shared.inbox import InboxMixin
+from cloudscale_shared.outbox import OutboxMixin
+from sqlalchemy import DateTime, Numeric, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-
-from cloudscale_shared.outbox import OutboxMixin
-from cloudscale_shared.inbox import InboxMixin
 
 
 class Base(DeclarativeBase):

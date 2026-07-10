@@ -1,14 +1,8 @@
 import pytest
-from httpx import AsyncClient, ASGITransport
-from opentelemetry import trace
-
-from cloudscale_shared.tracing import (
-    setup_tracing,
-    inject_trace_into_event,
-    extract_trace_from_event,
-    get_current_ids
-)
 from app.main import app
+from cloudscale_shared.tracing import extract_trace_from_event, get_current_ids, inject_trace_into_event, setup_tracing
+from httpx import ASGITransport, AsyncClient
+from opentelemetry import trace
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -24,14 +18,14 @@ def test_otel_tracing_setup():
 
 def test_span_id_and_trace_id_extraction():
     tracer = trace.get_tracer("test-tracer")
-    
+
     # Outside active span, should return '0', '0'
     t1, s1 = get_current_ids()
     assert t1 == "0"
     assert s1 == "0"
-    
+
     # Inside active span, should return correct hex ID strings
-    with tracer.start_as_current_span("test-active-span") as span:
+    with tracer.start_as_current_span("test-active-span") as _:
         t2, s2 = get_current_ids()
         assert t2 != "0"
         assert s2 != "0"
@@ -41,7 +35,7 @@ def test_span_id_and_trace_id_extraction():
 
 def test_kafka_event_trace_propagation():
     tracer = trace.get_tracer("test-tracer")
-    
+
     with tracer.start_as_current_span("test-publisher-span"):
         event = {
             "event_type": "TestEvent",
@@ -52,7 +46,7 @@ def test_kafka_event_trace_propagation():
         injected_event = inject_trace_into_event(event)
         assert "_trace_context" in injected_event
         assert "traceparent" in injected_event["_trace_context"]
-        
+
         # Extract trace context
         extracted_ctx = extract_trace_from_event(injected_event)
         assert extracted_ctx is not None
@@ -66,7 +60,7 @@ async def test_health_check_endpoints():
         res_liveness = await client.get("/health/liveness")
         assert res_liveness.status_code == 200
         assert res_liveness.json()["status"] == "alive"
-        
+
         # Readiness check (DB & Redis configured to test engine)
         res_readiness = await client.get("/health/readiness")
         assert res_readiness.status_code in (200, 503)

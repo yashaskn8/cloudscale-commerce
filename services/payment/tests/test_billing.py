@@ -1,10 +1,10 @@
 import pytest
-from sqlalchemy import select
-from httpx import ASGITransport, AsyncClient
-
 from app.main import app
-from app.models import Subscription, Invoice
+from app.models import Subscription
 from cloudscale_shared.middleware import tenant_id_context
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
+
 
 @pytest.mark.asyncio
 async def test_billing_subscription_flow(db_session):
@@ -46,6 +46,6 @@ async def test_billing_subscription_flow(db_session):
             invoices = response.json()
             assert len(invoices) == 1
             assert float(invoices[0]["amount"]) == 49.00
-            
+
     finally:
         tenant_id_context.reset(token)

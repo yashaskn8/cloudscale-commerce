@@ -1,13 +1,15 @@
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar, Any, Sequence
-from sqlalchemy import select, delete
+from collections.abc import Sequence
+from typing import Any, Generic, TypeVar
+
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 T = TypeVar("T")
 
 class AbstractRepository(ABC, Generic[T]):
     """Abstract Base Class for Data Access Repositories."""
-    
+
     @abstractmethod
     async def add(self, entity: T) -> T:
         """Persists a new entity to the data store."""
@@ -30,7 +32,7 @@ class AbstractRepository(ABC, Generic[T]):
 
 class SQLAlchemyRepository(AbstractRepository[T]):
     """SQLAlchemy Async implementation of the Repository Pattern."""
-    
+
     def __init__(self, session: AsyncSession, model_class: type[T]):
         self.session = session
         self.model_class = model_class

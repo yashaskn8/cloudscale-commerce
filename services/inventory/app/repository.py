@@ -3,11 +3,11 @@
 Handles database operations on the Inventory aggregate.
 """
 import uuid
+
+from app.models import Inventory
+from cloudscale_shared.repository import SQLAlchemyRepository
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from cloudscale_shared.repository import SQLAlchemyRepository
-from app.models import Inventory
 
 
 class InventoryRepository(SQLAlchemyRepository[Inventory]):

@@ -1,22 +1,22 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
-import structlog
 
+import structlog
+from app.config import settings
+from app.consumers import init_kafka, shutdown_kafka
+from app.router import router
 from cloudscale_shared import (
-    setup_logging,
-    setup_tracing,
     CorrelationIdMiddleware,
+    SecurityHeadersMiddleware,
     TenantContextMiddleware,
     init_db,
     init_redis,
-    setup_exception_handlers,
-    setup_metrics,
-    SecurityHeadersMiddleware,
     register_health_routes,
+    setup_exception_handlers,
+    setup_logging,
+    setup_metrics,
+    setup_tracing,
 )
-from app.config import settings
-from app.router import router
-from app.consumers import init_kafka, shutdown_kafka
+from fastapi import FastAPI
 
 logger = structlog.get_logger()
 

@@ -4,9 +4,10 @@ API Contract Compliance & Schema Validation Tests.
 Ensures that API gateway request/response structures remain compatible across
 service updates, preventing runtime failures during deployment.
 """
-import pytest
-from pydantic import BaseModel, Field, ValidationError
 from typing import Literal
+
+import pytest
+from pydantic import BaseModel, ValidationError
 
 # ── Gateway Contract Models ───────────────────────────────────────────────────
 

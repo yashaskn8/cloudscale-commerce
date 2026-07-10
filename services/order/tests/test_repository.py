@@ -1,9 +1,10 @@
 import uuid
-import pytest
 from decimal import Decimal
-from sqlalchemy.ext.asyncio import AsyncSession
+
+import pytest
 from app.models import Order, OrderItem
 from app.repository import OrderRepository
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @pytest.mark.asyncio

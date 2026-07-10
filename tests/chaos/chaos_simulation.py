@@ -4,14 +4,13 @@ Simulates network dropouts, database degradation, and Redis caching outages
 to verify that the platform degrades gracefully instead of crashing.
 """
 import asyncio
-import time
-import pytest
 from unittest.mock import AsyncMock, patch
 
+import pytest
 from cloudscale_shared import (
     CircuitBreaker,
-    CircuitState,
     CircuitBreakerOpenException,
+    CircuitState,
     circuit_breaker,
 )
 
@@ -20,7 +19,7 @@ from cloudscale_shared import (
 async def test_chaos_circuit_breaker_db_failure():
     """Verify that after repeated database failures, circuit breaker trips and blocks calls."""
     breaker = CircuitBreaker("chaos_db", failure_threshold=3, recovery_timeout_seconds=2.0)
-    
+
     call_count = 0
 
     @circuit_breaker(breaker)
@@ -40,13 +39,13 @@ async def test_chaos_circuit_breaker_db_failure():
     # 2. Subsequent call should fail immediately with CircuitBreakerOpenException
     with pytest.raises(CircuitBreakerOpenException):
         await flaky_db_call()
-        
+
     # The actual function should NOT have been entered on the 4th call
     assert call_count == 3
 
     # 3. Wait for recovery timeout to pass
     await asyncio.sleep(2.1)
-    
+
     # Breaker should transition to HALF-OPEN on check
     breaker.check_state()
     assert breaker.state == CircuitState.HALF_OPEN
@@ -56,16 +55,15 @@ async def test_chaos_circuit_breaker_db_failure():
 async def test_chaos_cache_aside_redis_outage():
     """Verify that Catalog service degrades gracefully to database reads when Redis is offline."""
     from app.service import CatalogService
-    from cloudscale_shared.exceptions import NotFoundException
-    
+
     mock_session = AsyncMock()
     mock_redis = AsyncMock()
-    
+
     # Mock Redis to raise connection error (simulating Redis down)
     mock_redis.get.side_effect = ConnectionError("Redis is unreachable")
-    
+
     service = CatalogService(session=mock_session, redis=mock_redis)
-    
+
     # Mock the database repository response
     mock_product = AsyncMock()
     mock_product.id = uuid_val = __import__("uuid").uuid4()
@@ -74,7 +72,7 @@ async def test_chaos_cache_aside_redis_outage():
     mock_product.description = "Flaky Redis Product"
     mock_product.price = __import__("decimal").Decimal("99.99")
     mock_product.is_active = True
-    
+
     with patch.object(service.repo, 'get_by_id', return_value=mock_product):
         # Call should succeed by falling back to DB, logging the Redis error
         res = await service.get_product_by_id(uuid_val)

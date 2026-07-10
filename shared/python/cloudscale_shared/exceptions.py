@@ -1,7 +1,7 @@
-from fastapi import FastAPI, Request, status
-from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
 import structlog
+from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 logger = structlog.get_logger()
 
@@ -41,14 +41,14 @@ class ValidationException(CloudScaleException):
 
 def setup_exception_handlers(app: FastAPI) -> None:
     """Registers global exception handlers for FastAPI applications."""
-    
+
     @app.exception_handler(CloudScaleException)
     async def cloudscale_exception_handler(request: Request, exc: CloudScaleException):
         correlation_id = structlog.contextvars.get_contextvars().get("correlation_id", "unknown")
         logger.warn(
-            "Domain exception occurred", 
-            code=exc.code, 
-            status_code=exc.status_code, 
+            "Domain exception occurred",
+            code=exc.code,
+            status_code=exc.status_code,
             message=exc.message,
             path=request.url.path
         )
@@ -72,11 +72,11 @@ def setup_exception_handlers(app: FastAPI) -> None:
             loc = ".".join(str(x) for x in error.get("loc", []))
             msg = error.get("msg")
             errors.append(f"'{loc}': {msg}")
-            
+
         message = "; ".join(errors)
         logger.warn(
-            "Request validation failed", 
-            status_code=400, 
+            "Request validation failed",
+            status_code=400,
             errors=errors,
             path=request.url.path
         )
@@ -95,7 +95,7 @@ def setup_exception_handlers(app: FastAPI) -> None:
     async def generic_exception_handler(request: Request, exc: Exception):
         correlation_id = structlog.contextvars.get_contextvars().get("correlation_id", "unknown")
         logger.exception(
-            "Unhandled system exception occurred", 
+            "Unhandled system exception occurred",
             error=str(exc),
             path=request.url.path
         )

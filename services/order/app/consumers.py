@@ -14,15 +14,15 @@ Saga State Machine:
 import asyncio
 import uuid
 from typing import Any
-from sqlalchemy import select
-import structlog
 
-from cloudscale_shared.database import db_manager
-from cloudscale_shared.events import Event, KafkaProducerWrapper, KafkaConsumerWrapper
-from cloudscale_shared.inbox import inbox_already_processed, record_inbox
-from cloudscale_shared.outbox import write_outbox, OutboxWorker
+import structlog
 from app.config import settings
-from app.models import Order, OrderItem, OrderStatus, OutboxMessage, InboxMessage
+from app.models import InboxMessage, Order, OrderStatus, OutboxMessage
+from cloudscale_shared.database import db_manager
+from cloudscale_shared.events import Event, KafkaConsumerWrapper, KafkaProducerWrapper
+from cloudscale_shared.inbox import inbox_already_processed, record_inbox
+from cloudscale_shared.outbox import OutboxWorker, write_outbox
+from sqlalchemy import select
 
 logger = structlog.get_logger()
 producer: KafkaProducerWrapper | None = None

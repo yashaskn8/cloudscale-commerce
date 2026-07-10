@@ -1,11 +1,11 @@
 import uuid
 from decimal import Decimal
+
 import pytest
+from app.consumers import handle_event
+from app.models import OutboxMessage, Payment
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.models import Payment, OutboxMessage
-from app.consumers import handle_event
 
 
 @pytest.mark.asyncio
@@ -35,7 +35,7 @@ async def test_payment_processing_success(db_session: AsyncSession, monkeypatch)
             ]
         }
     }
-    
+
     # Process
     await handle_event(inventory_reserved_event)
 

@@ -8,19 +8,13 @@ Validates that the embedding engine produces semantically meaningful vectors:
   - The vector index returns correctly ranked nearest neighbors
   - Cache integration works with Redis mock
 """
-import pytest
-import uuid
-from unittest.mock import AsyncMock, MagicMock
-from decimal import Decimal
 
 from app.ai import (
     EmbeddingEngine,
     VectorIndex,
-    AIRecommendationService,
-    _tokenize,
     _expand_query_tokens,
+    _tokenize,
 )
-
 
 # ── Unit Tests: Tokenizer ───────────────────────────────────────────────────────
 

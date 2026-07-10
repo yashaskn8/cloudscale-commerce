@@ -1,9 +1,10 @@
+import contextvars
 import time
 import uuid
-import contextvars
+
+import structlog
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
-import structlog
 
 logger = structlog.get_logger()
 
@@ -30,7 +31,7 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
         )
 
         start_time = time.perf_counter()
-        
+
         try:
             response = await call_next(request)
             duration = time.perf_counter() - start_time
@@ -52,7 +53,7 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
     """Middleware that extracts the tenant context header and attaches it to request contextvars."""
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         tenant_id = request.headers.get("X-Tenant-ID") or request.headers.get("x-tenant-id") or "default-tenant"
-        
+
         # Bind tenant context
         token = tenant_id_context.set(tenant_id)
         structlog.contextvars.bind_contextvars(tenant_id=tenant_id)

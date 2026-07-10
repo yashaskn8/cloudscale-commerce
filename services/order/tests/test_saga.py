@@ -3,14 +3,12 @@ from decimal import Decimal
 from unittest.mock import AsyncMock
 
 import pytest
+from app.consumers import handle_event
+from app.models import OrderStatus, OutboxMessage
+from app.schemas import OrderCreate, OrderItemCreate
+from app.service import OrderService
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from cloudscale_shared.events import Event
-from app.models import Order, OrderStatus, OutboxMessage, InboxMessage
-from app.service import OrderService
-from app.schemas import OrderCreate, OrderItemCreate
-from app.consumers import handle_event
 
 
 @pytest.mark.asyncio
@@ -139,7 +137,7 @@ async def test_inbox_deduplication(db_session: AsyncSession, monkeypatch):
     )
     order = await service.create_order(user_id, payload)
     await db_session.commit()
-    
+
     # Deliver the same InventoryReservedEvent twice with identical event_id
     event_id = str(uuid.uuid4())
     inventory_reserved_event = {

@@ -7,8 +7,8 @@ These tests validate that core user journeys work end-to-end after deployment:
 4. Order placement.
 """
 import os
+
 import httpx
-import pytest
 
 AUTH_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:8001")
 CATALOG_URL = os.getenv("CATALOG_SERVICE_URL", "http://localhost:8002")

@@ -1,12 +1,12 @@
-import pytest
-from typing import AsyncGenerator
-from sqlalchemy.pool import StaticPool
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from collections.abc import AsyncGenerator
 
-import cloudscale_shared.database
 import app.consumers
+import cloudscale_shared.database
+import pytest
 from app.models import Base
 from cloudscale_shared.database import DatabaseSessionManager
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import StaticPool
 
 
 class MockRedisClient:
@@ -35,13 +35,13 @@ async def configure_global_db_manager(test_session_manager):
     original_shared_manager = cloudscale_shared.database.db_manager
     original_consumers_manager = app.consumers.db_manager
     original_redis_manager = app.consumers.redis_manager
-    
+
     cloudscale_shared.database.db_manager = test_session_manager
     app.consumers.db_manager = test_session_manager
     app.consumers.redis_manager = MockRedisManager()
-    
+
     yield
-    
+
     cloudscale_shared.database.db_manager = original_shared_manager
     app.consumers.db_manager = original_consumers_manager
     app.consumers.redis_manager = original_redis_manager

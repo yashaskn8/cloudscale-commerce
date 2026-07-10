@@ -3,12 +3,12 @@
 Defines the Inventory aggregate and transactional Outbox/Inbox tables.
 """
 import uuid
+
+from cloudscale_shared.inbox import InboxMixin
+from cloudscale_shared.outbox import OutboxMixin
 from sqlalchemy import Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-
-from cloudscale_shared.outbox import OutboxMixin
-from cloudscale_shared.inbox import InboxMixin
 
 
 class Base(DeclarativeBase):

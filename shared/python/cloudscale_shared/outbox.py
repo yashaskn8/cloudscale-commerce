@@ -14,16 +14,15 @@ Usage in a service's models.py:
 import asyncio
 import json
 import uuid
-from datetime import datetime, timezone
-from typing import Any
+from datetime import UTC, datetime
 
 import structlog
-from sqlalchemy import String, Text, DateTime, Boolean, Integer, select
+from sqlalchemy import Boolean, DateTime, Integer, String, Text, select
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import Mapped, mapped_column
 
-from cloudscale_shared.events import KafkaProducerWrapper, Event
+from cloudscale_shared.events import Event, KafkaProducerWrapper
 
 logger = structlog.get_logger()
 
@@ -43,7 +42,7 @@ class OutboxMixin:
     payload: Mapped[str] = mapped_column(Text, nullable=False)
     correlation_id: Mapped[str] = mapped_column(String(36), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
+        DateTime, default=lambda: datetime.now(UTC), nullable=False
     )
     processed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     retry_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

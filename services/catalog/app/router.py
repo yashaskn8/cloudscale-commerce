@@ -3,17 +3,17 @@
 Exposes endpoints for querying catalog items, adding new ones, and performing AI recommendations.
 """
 import uuid
+
+import structlog
+from app.ai import AIRecommendationService
+from app.schemas import ProductCreate, ProductResponse
+from app.service import CatalogService
+from cloudscale_shared import get_db_session, get_redis_client
+from cloudscale_shared.query import Page, PageParams
+from cloudscale_shared.security import RoleChecker
 from fastapi import APIRouter, Depends, Query, status
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
-import structlog
-
-from cloudscale_shared import get_db_session, get_redis_client
-from cloudscale_shared.query import PageParams, Page
-from cloudscale_shared.security import RoleChecker
-from app.schemas import ProductCreate, ProductResponse
-from app.service import CatalogService
-from app.ai import AIRecommendationService
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/api/v1/products", tags=["Catalog"])

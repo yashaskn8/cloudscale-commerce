@@ -6,6 +6,7 @@ These tests run against live (or staging) service endpoints to verify:
 3. Response body schema structure matches expected contracts.
 """
 import os
+
 import httpx
 import pytest
 

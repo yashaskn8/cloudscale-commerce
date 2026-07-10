@@ -10,19 +10,19 @@ Validates:
   6. Subscription status transitions on payment_failed events
   7. Replay attack protection (stale timestamps)
 """
-import pytest
-import hmac
 import hashlib
-import time
+import hmac
 import json
+import time
 from decimal import Decimal
-from httpx import ASGITransport, AsyncClient
-from sqlalchemy import select
 
+import pytest
 from app.main import app
-from app.models import Subscription, Invoice
+from app.models import Invoice, Subscription
 from app.router import STRIPE_WEBHOOK_SECRET, verify_stripe_signature
 from cloudscale_shared.middleware import tenant_id_context
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
 
 
 def _build_stripe_signature(payload: bytes, secret: str, timestamp: int | None = None) -> str:

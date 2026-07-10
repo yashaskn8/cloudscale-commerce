@@ -1,8 +1,9 @@
 import uuid
+
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import Inventory
 from app.repository import InventoryRepository
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @pytest.mark.asyncio

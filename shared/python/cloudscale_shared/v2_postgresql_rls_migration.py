@@ -54,6 +54,56 @@ def generate_rls_migration(table_name: str, tenant_column: str = "tenant_id") ->
     Returns:
         Complete SQL migration script as a string.
     """
+    if table_name == "order_items":
+        return f"""
+-- ============================================================================
+-- Row-Level Security Migration: {table_name}
+-- ============================================================================
+-- Step 1: Enable Row-Level Security on the table
+ALTER TABLE {table_name} ENABLE ROW LEVEL SECURITY;
+
+-- Step 2: Force RLS even for table owners (defense in depth)
+ALTER TABLE {table_name} FORCE ROW LEVEL SECURITY;
+
+-- Step 3: Drop existing policies if re-running migration
+DROP POLICY IF EXISTS tenant_isolation_select ON {table_name};
+DROP POLICY IF EXISTS tenant_isolation_insert ON {table_name};
+DROP POLICY IF EXISTS tenant_isolation_update ON {table_name};
+DROP POLICY IF EXISTS tenant_isolation_delete ON {table_name};
+
+-- Step 4: SELECT policy — users can only read their own tenant's order items
+CREATE POLICY tenant_isolation_select ON {table_name}
+    FOR SELECT
+    USING (EXISTS (
+        SELECT 1 FROM orders WHERE orders.id = {table_name}.order_id 
+        AND orders.tenant_id = current_setting('app.current_tenant_id', true)
+    ));
+
+-- Step 5: INSERT policy — users can only insert order items for their own tenant's orders
+CREATE POLICY tenant_isolation_insert ON {table_name}
+    FOR INSERT
+    WITH CHECK (EXISTS (
+        SELECT 1 FROM orders WHERE orders.id = {table_name}.order_id 
+        AND orders.tenant_id = current_setting('app.current_tenant_id', true)
+    ));
+
+-- Step 6: UPDATE policy — users can only update their own tenant's order items
+CREATE POLICY tenant_isolation_update ON {table_name}
+    FOR UPDATE
+    USING (EXISTS (
+        SELECT 1 FROM orders WHERE orders.id = {table_name}.order_id 
+        AND orders.tenant_id = current_setting('app.current_tenant_id', true)
+    ));
+
+-- Step 7: DELETE policy — users can only delete their own tenant's order items
+CREATE POLICY tenant_isolation_delete ON {table_name}
+    FOR DELETE
+    USING (EXISTS (
+        SELECT 1 FROM orders WHERE orders.id = {table_name}.order_id 
+        AND orders.tenant_id = current_setting('app.current_tenant_id', true)
+    ));
+""".strip()
+
     return f"""
 -- ============================================================================
 -- Row-Level Security Migration: {table_name}

@@ -93,3 +93,16 @@ jobs:
         with:
           name: sbom-artifact
           path: sbom.spdx.json
+
+      - name: Sign Container Images (Keyless via Sigstore OIDC)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          echo "Signing container images with Cosign keyless (Fulcio/Rekor)..."
+          for SERVICE in auth catalog inventory order payment notification; do
+            IMAGE="ghcr.io/${{ github.repository }}/${SERVICE}-service:${{ github.sha }}"
+            echo "Signing ${IMAGE}..."
+            cosign sign --yes "${IMAGE}"
+          done
+          echo "All container images signed and attestations recorded in Rekor transparency log."

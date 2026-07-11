@@ -64,12 +64,12 @@ async def handle_event(event: dict[str, Any]):
 
 
 async def send_order_confirmation(payload: dict[str, Any], correlation_id: str):
-    """Simulates sending an email confirmation following successful payment receipt."""
+    """SIMULATED: Logs an email confirmation event. No real email provider is wired."""
     order_id = payload.get("order_id")
     transaction_id = payload.get("transaction_id", "unknown")
 
     logger.info(
-        "Sending Transactional Email: Order Confirmation",
+        "[SIMULATED] Sending Transactional Email: Order Confirmation",
         order_id=order_id,
         transaction_id=transaction_id,
         correlation_id=correlation_id,
@@ -78,4 +78,4 @@ async def send_order_confirmation(payload: dict[str, Any], correlation_id: str):
     # Simulate API communication delay
     await asyncio.sleep(0.3)
 
-    logger.info("Order confirmation email successfully dispatched.", order_id=order_id)
+    logger.info("[SIMULATED] Order confirmation email dispatched (no-op).", order_id=order_id)

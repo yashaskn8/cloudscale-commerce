@@ -32,13 +32,22 @@ async def lifespan(app: FastAPI):
     if redis_manager:
         app.state.redis_client = redis_manager.get_client()
 
-    from app.models import Base
-    from cloudscale_shared.database import db_manager
-
-    if db_manager:
-        async with db_manager._engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-        logger.info("Database tables initialized successfully.")
+    import os
+    if os.getenv("RUN_MIGRATIONS", "false").lower() == "true":
+        logger.info("Running database migrations via Alembic...")
+        import asyncio
+        from alembic.config import Config
+        from alembic import command
+        
+        loop = asyncio.get_event_loop()
+        def run_alembic():
+            alembic_cfg = Config("alembic.ini")
+            command.upgrade(alembic_cfg, "head")
+        
+        await loop.run_in_executor(None, run_alembic)
+        logger.info("Database migrations applied successfully.")
+    else:
+        logger.info("Database migration check skipped (RUN_MIGRATIONS=false).")
 
     logger.info("Auth microservice initialized", service_name=settings.SERVICE_NAME)
     yield

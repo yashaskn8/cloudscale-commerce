@@ -26,13 +26,16 @@ async def lifespan(app: FastAPI):
 
     init_db(settings.DATABASE_URL)
 
-    from app.models import Base
-    from cloudscale_shared.database import db_manager
-
-    if db_manager:
-        async with db_manager._write_engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-        logger.info("Database tables initialized successfully.")
+    import os
+    if os.getenv("RUN_MIGRATIONS", "false").lower() == "true":
+        from app.models import Base
+        from cloudscale_shared.database import db_manager
+        if db_manager:
+            async with db_manager._write_engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            logger.info("Database tables initialized successfully.")
+    else:
+        logger.info("Database initialization skipped (RUN_MIGRATIONS=false).")
 
     try:
         await init_kafka()

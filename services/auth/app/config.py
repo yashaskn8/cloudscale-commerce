@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/auth_db"
     REDIS_URL: str = "redis://localhost:6379/0"
 
-    JWT_SECRET_KEY: str = "supersecretkeyforcloudscalecommercejwtissuancechangeinprod"
+    JWT_SECRET_KEY: str  # REQUIRED — must be set via env var or .env file
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7

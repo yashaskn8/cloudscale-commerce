@@ -19,12 +19,14 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
+
 logger = structlog.get_logger()
 
 router = APIRouter(prefix="/api/v1/billing", tags=["Billing"])
 
-# Stripe webhook signing secret — in production, loaded from environment/secrets manager
-STRIPE_WEBHOOK_SECRET = "whsec_cloudscale_prod_signing_key_2026"
+# Stripe webhook signing secret — loaded from settings
+STRIPE_WEBHOOK_SECRET = settings.STRIPE_WEBHOOK_SECRET
 
 PLAN_LIMITS = {
     "free": {"max_products": 10, "max_orders": 15},

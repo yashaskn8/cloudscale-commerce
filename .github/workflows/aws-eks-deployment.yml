@@ -106,9 +106,33 @@ jobs:
       - name: Run Smoke API Tests on Canary
         if: github.event.inputs.deploy_strategy == 'canary'
         run: |
-          echo "Running API smoke tests on Canary endpoint..."
-          # Mock smoke test: curl Canary endpoint and assert 200 OK
-          curl -s -f https://api.cloudscale.io/health || exit 1
+          echo "Setting up background port-forwards to Canary services..."
+          kubectl port-forward svc/cloudscale-canary-auth-service 8001:8001 -n cloudscale-prod &
+          PID_AUTH=$!
+          kubectl port-forward svc/cloudscale-canary-catalog-service 8002:8002 -n cloudscale-prod &
+          PID_CATALOG=$!
+          kubectl port-forward svc/cloudscale-canary-inventory-service 8003:8003 -n cloudscale-prod &
+          PID_INVENTORY=$!
+          kubectl port-forward svc/cloudscale-canary-order-service 8004:8004 -n cloudscale-prod &
+          PID_ORDER=$!
+          
+          # Wait for ports to be ready
+          sleep 5
+          
+          echo "Running functional API smoke tests against Canary..."
+          export AUTH_SERVICE_URL="http://localhost:8001"
+          export CATALOG_SERVICE_URL="http://localhost:8002"
+          export INVENTORY_SERVICE_URL="http://localhost:8003"
+          export ORDER_SERVICE_URL="http://localhost:8004"
+          
+          pip install httpx pytest
+          pytest tests/smoke/test_smoke.py
+          TEST_EXIT_CODE=$?
+          
+          # Shutdown port forwards
+          kill $PID_AUTH $PID_CATALOG $PID_INVENTORY $PID_ORDER || true
+          
+          exit $TEST_EXIT_CODE
 
       - name: Promote Canary to Full Release
         if: github.event.inputs.deploy_strategy == 'canary'

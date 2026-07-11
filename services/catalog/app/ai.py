@@ -1,5 +1,5 @@
 """
-AI Recommendation & Semantic Search Engine.
+Product Semantic Search Engine.
 
 Implements a production-grade vector embedding pipeline for product similarity
 and natural-language semantic search. Uses a lightweight TF-IDF vectorizer with
@@ -14,7 +14,7 @@ Architecture:
   2. VectorIndex: In-memory HNSW-like brute-force index for cosine similarity
      search across product embeddings. In production, this would be replaced
      by pgvector or a dedicated vector DB (Pinecone, Qdrant, Weaviate).
-  3. AIRecommendationService: Orchestrates embedding generation, similarity
+  3. ProductSearchService: Orchestrates embedding generation, similarity
      search, caching, and Prometheus telemetry.
 
 Why not use sentence-transformers directly?
@@ -334,7 +334,7 @@ class VectorIndex:
 # ── AI Recommendation Service ──────────────────────────────────────────────────
 
 
-class AIRecommendationService:
+class ProductSearchService:
     """
     Production-grade AI service orchestrating:
       1. Corpus fitting (building IDF statistics from all products)

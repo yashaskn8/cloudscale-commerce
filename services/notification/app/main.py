@@ -27,14 +27,16 @@ async def lifespan(app: FastAPI):
     # Initialize Database for Inbox tracking
     init_db(settings.DATABASE_URL)
 
-    # Create DB schemas automatically
-    from app.models import Base
-    from cloudscale_shared.database import db_manager
-
-    if db_manager:
-        async with db_manager._engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-        logger.info("Database tables initialized successfully.")
+    import os
+    if os.getenv("RUN_MIGRATIONS", "false").lower() == "true":
+        from app.models import Base
+        from cloudscale_shared.database import db_manager
+        if db_manager:
+            async with db_manager._engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            logger.info("Database tables initialized successfully.")
+    else:
+        logger.info("Database initialization skipped (RUN_MIGRATIONS=false).")
 
     # Initialize Kafka consumer loop
     try:
@@ -42,7 +44,10 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error("Failed to start Kafka listeners.", error=str(e))
 
-    logger.info("Notification microservice initialized", service_name=settings.SERVICE_NAME)
+    logger.info(
+        "Notification microservice initialized (SIMULATED — no real email/SMS provider wired)",
+        service_name=settings.SERVICE_NAME,
+    )
     yield
 
     # Clean up
@@ -55,8 +60,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="CloudScale Commerce - Notification Service",
-    description="Stateless Event-driven Notification Service that triggers client emails and SMS.",
+    title="CloudScale Commerce - Notification Service (Simulated)",
+    description="Event-driven Notification Service. Currently SIMULATED — logs notification events "
+    "but does not dispatch real emails or SMS. Wire a provider (SendGrid, Twilio, etc.) for production.",
     version="1.0.0",
     lifespan=lifespan,
 )

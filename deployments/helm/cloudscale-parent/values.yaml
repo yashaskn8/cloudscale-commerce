@@ -20,7 +20,7 @@ global:
     endpoint: http://otel-collector:4317
 
   jwt:
-    secretKey: supersecretkeyforcloudscalecommercejwtissuancechangeinprod
+    secretKey: ""  # REQUIRED: Supply via --set global.jwt.secretKey or ExternalSecret
     algorithm: HS256
 
 # ── Sub-chart toggles ──────────────────────────────────────────────────────────

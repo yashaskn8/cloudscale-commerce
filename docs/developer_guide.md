@@ -71,11 +71,11 @@ alembic revision --autogenerate -m "Add new attributes"
 
 ---
 
-## 4. Sync Communication (gRPC Protobufs)
-gRPC definitions are located in [shared/proto/](file:///c:/Users/prana/OneDrive/Desktop/enterpise/shared/proto/). To recompile python proto classes following modifications:
+## 4. Sync Communication (Protocol Buffer Contracts)
+Protocol Buffer definitions for future inter-service synchronous calls are located in `shared/proto/`. These define the service contracts but are **not yet wired** into the runtime — all inter-service communication currently uses the Kafka event bus. To compile stubs when ready:
 ```bash
 pip install grpcio-tools
-python -m grpc_tools.protoc -Ishared/proto --python_out=shared/python/cloudscale_shared --grpc_python_out=shared/python/cloudscale_shared shared/proto/*.proto
+python -m grpc_tools.protoc -Ishared/proto --python_out=shared/python/cloudscale_shared/grpc --grpc_python_out=shared/python/cloudscale_shared/grpc shared/proto/*.proto
 ```
 
 ---

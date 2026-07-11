@@ -36,6 +36,20 @@ jobs:
     name: Test Suite (${{ matrix.service }})
     needs: lint-and-format
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cloudscale_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     strategy:
       fail-fast: false
       matrix:
@@ -62,6 +76,7 @@ jobs:
       - name: Run Tests
         env:
           PYTHONPATH: services/${{ matrix.service }}
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/cloudscale_test
         run: |
           pytest --asyncio-mode=auto --cov=services/${{ matrix.service }}/app --cov-report=xml services/${{ matrix.service }}/tests/
 

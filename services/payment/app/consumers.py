@@ -87,13 +87,33 @@ async def handle_event(event: dict[str, Any]):
 
 
 async def _process_payment(db, payload: dict[str, Any], correlation_id: str):
-    """Charges user card. Triggers compensation flow on payment failure (quantity = 99)."""
+    """Charges user card via Stripe, or runs a simulated charge when SIMULATE_PAYMENTS=True."""
     order_id = payload.get("order_id")
     items = payload.get("items", [])
 
     # Calculate amount
     amount = sum(item.get("quantity", 0) * item.get("unit_price", 0.0) for item in items)
-    logger.info("Processing card payment charge", order_id=order_id, amount=amount)
+
+    if not settings.SIMULATE_PAYMENTS:
+        # ── Real Stripe integration path (TODO: wire stripe.PaymentIntent.create) ──
+        logger.error(
+            "Real payment processing is not yet implemented. "
+            "Set SIMULATE_PAYMENTS=True for development/staging.",
+            order_id=order_id,
+            amount=amount,
+        )
+        raise NotImplementedError(
+            "Real Stripe payment processing is not yet wired. "
+            "Set SIMULATE_PAYMENTS=True to use the mock payment flow."
+        )
+
+    # ── Simulated payment path ──────────────────────────────────────────────
+    logger.info(
+        "Processing SIMULATED card payment charge",
+        order_id=order_id,
+        amount=amount,
+        simulated=True,
+    )
 
     # Determine mock failure: quantity = 99
     should_fail = any(item.get("quantity") == 99 for item in items)
@@ -102,7 +122,7 @@ async def _process_payment(db, payload: dict[str, Any], correlation_id: str):
     await asyncio.sleep(0.5)
 
     if should_fail:
-        logger.warn("Mock card payment failed", order_id=order_id)
+        logger.warn("Simulated card payment failed", order_id=order_id)
         failed_event = Event(
             event_type="PaymentFailedEvent",
             correlation_id=correlation_id,
@@ -110,7 +130,7 @@ async def _process_payment(db, payload: dict[str, Any], correlation_id: str):
         )
         write_outbox(db, OutboxMessage, settings.PAYMENT_EVENTS_TOPIC, failed_event, key=order_id)
     else:
-        transaction_id = f"txn_{uuid.uuid4().hex[:16]}"
+        transaction_id = f"sim_txn_{uuid.uuid4().hex[:16]}"
 
         # Save payment record in DB
         payment = Payment(
@@ -118,7 +138,7 @@ async def _process_payment(db, payload: dict[str, Any], correlation_id: str):
         )
         db.add(payment)
 
-        logger.info("Mock card payment completed successfully", order_id=order_id, txn_id=transaction_id)
+        logger.info("Simulated card payment completed successfully", order_id=order_id, txn_id=transaction_id)
 
         success_event = Event(
             event_type="PaymentSuccessEvent",
@@ -126,3 +146,4 @@ async def _process_payment(db, payload: dict[str, Any], correlation_id: str):
             payload={"order_id": order_id, "items": items, "transaction_id": transaction_id},
         )
         write_outbox(db, OutboxMessage, settings.PAYMENT_EVENTS_TOPIC, success_event, key=order_id)
+

@@ -24,6 +24,10 @@ class Inventory(Base):
     reserved_stock: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
+    __mapper_args__ = {
+        "version_id_col": version
+    }
+
 
 class OutboxMessage(Base, OutboxMixin):
     """Transactional outbox for Inventory Service events."""

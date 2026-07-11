@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 async def test_inventory_reserve_and_release(db_session: AsyncSession, monkeypatch):
     # Mock producer
     from unittest.mock import AsyncMock
+
     mock_producer = AsyncMock()
     monkeypatch.setattr("app.consumers.producer", mock_producer)
 
@@ -19,12 +20,7 @@ async def test_inventory_reserve_and_release(db_session: AsyncSession, monkeypat
     correlation_id = "test-corr-inv-saga"
 
     # Setup initial inventory level
-    inv = Inventory(
-        product_id=product_id,
-        available_stock=10,
-        reserved_stock=0,
-        version=1
-    )
+    inv = Inventory(product_id=product_id, available_stock=10, reserved_stock=0, version=1)
     db_session.add(inv)
     await db_session.commit()
 
@@ -33,10 +29,7 @@ async def test_inventory_reserve_and_release(db_session: AsyncSession, monkeypat
         "event_id": str(uuid.uuid4()),
         "event_type": "OrderCreatedEvent",
         "correlation_id": correlation_id,
-        "payload": {
-            "order_id": order_id,
-            "items": [{"product_id": str(product_id), "quantity": 3}]
-        }
+        "payload": {"order_id": order_id, "items": [{"product_id": str(product_id), "quantity": 3}]},
     }
     await handle_event(order_created_event)
 
@@ -57,10 +50,7 @@ async def test_inventory_reserve_and_release(db_session: AsyncSession, monkeypat
         "event_id": str(uuid.uuid4()),
         "event_type": "PaymentFailedEvent",
         "correlation_id": correlation_id,
-        "payload": {
-            "order_id": order_id,
-            "items": [{"product_id": str(product_id), "quantity": 3}]
-        }
+        "payload": {"order_id": order_id, "items": [{"product_id": str(product_id), "quantity": 3}]},
     }
     await handle_event(payment_failed_event)
 

@@ -3,6 +3,7 @@
 Consumes events from payment-events, deduping messages with InboxMessage to
 ensure exactly-once transactional email dispatching.
 """
+
 import asyncio
 import uuid
 from typing import Any
@@ -23,7 +24,7 @@ async def init_kafka():
     consumer = KafkaConsumerWrapper(
         bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
         group_id="notification-service-group",
-        topics=[settings.PAYMENT_EVENTS_TOPIC]
+        topics=[settings.PAYMENT_EVENTS_TOPIC],
     )
     await consumer.start()
 
@@ -44,10 +45,7 @@ async def handle_event(event: dict[str, Any]):
     payload = event.get("payload", {})
 
     logger.info(
-        "Notification consumer received event",
-        event_type=event_type,
-        event_id=event_id,
-        correlation_id=correlation_id
+        "Notification consumer received event", event_type=event_type, event_id=event_id, correlation_id=correlation_id
     )
 
     async with db_manager.session() as db:
@@ -74,7 +72,7 @@ async def send_order_confirmation(payload: dict[str, Any], correlation_id: str):
         "Sending Transactional Email: Order Confirmation",
         order_id=order_id,
         transaction_id=transaction_id,
-        correlation_id=correlation_id
+        correlation_id=correlation_id,
     )
 
     # Simulate API communication delay

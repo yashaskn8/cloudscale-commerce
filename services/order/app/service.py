@@ -3,6 +3,7 @@
 Coordinates Order aggregates, validates checkout commands, implements idempotency,
 and writes Saga initiation events to the transactional outbox (not directly to Kafka).
 """
+
 import uuid
 
 import structlog
@@ -49,7 +50,9 @@ class OrderService:
             current_count = await self.repo.count_tenant_orders()
             if current_count >= max_limit:
                 logger.warn("Order checkout failed - Quota limit exceeded", tenant_id=tenant_id, plan_tier=plan_tier)
-                raise ValidationException(f"Order checkout quota limit of {max_limit} exceeded for plan '{plan_tier}'. Please upgrade.")
+                raise ValidationException(
+                    f"Order checkout quota limit of {max_limit} exceeded for plan '{plan_tier}'. Please upgrade."
+                )
 
         # 1. Idempotency Check
         existing_order = await self.repo.get_by_idempotency_key(payload.idempotency_key)
@@ -86,9 +89,7 @@ class OrderService:
             self.session.add(new_item)
 
         # 5. Build OrderCreatedEvent
-        correlation_id = structlog.contextvars.get_contextvars().get(
-            "correlation_id", str(uuid.uuid4())
-        )
+        correlation_id = structlog.contextvars.get_contextvars().get("correlation_id", str(uuid.uuid4()))
         event_payload = {
             "order_id": str(new_order.id),
             "user_id": str(user_uuid),
@@ -122,9 +123,7 @@ class OrderService:
 
         return new_order
 
-    async def transition_status(
-        self, order_id: str, new_status: OrderStatus, correlation_id: str
-    ) -> Order | None:
+    async def transition_status(self, order_id: str, new_status: OrderStatus, correlation_id: str) -> Order | None:
         """Transitions an order to a new Saga state, writing audit log."""
         order = await self.repo.get_by_id(uuid.UUID(order_id))
         if not order:

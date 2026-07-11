@@ -12,12 +12,7 @@ async def test_inventory_repository_crud(db_session: AsyncSession):
     product_id = uuid.uuid4()
 
     # 1. Add inventory record
-    inventory = Inventory(
-        product_id=product_id,
-        available_stock=100,
-        reserved_stock=0,
-        version=1
-    )
+    inventory = Inventory(product_id=product_id, available_stock=100, reserved_stock=0, version=1)
     await repo.add(inventory)
     await db_session.flush()
 

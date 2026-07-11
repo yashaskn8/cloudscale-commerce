@@ -25,7 +25,7 @@ async def test_successful_saga_checkout(db_session: AsyncSession, monkeypatch):
     # 1. Create order
     payload = OrderCreate(
         items=[OrderItemCreate(product_id=item_id, quantity=2, unit_price=Decimal("10.00"))],
-        idempotency_key=idempotency_key
+        idempotency_key=idempotency_key,
     )
     order = await service.create_order(user_id, payload)
     assert order.status == OrderStatus.PENDING.value
@@ -45,10 +45,7 @@ async def test_successful_saga_checkout(db_session: AsyncSession, monkeypatch):
         "event_id": event_id,
         "event_type": "InventoryReservedEvent",
         "correlation_id": correlation_id,
-        "payload": {
-            "order_id": str(order.id),
-            "items": [{"product_id": str(item_id), "quantity": 2}]
-        }
+        "payload": {"order_id": str(order.id), "items": [{"product_id": str(item_id), "quantity": 2}]},
     }
     await handle_event(inventory_reserved_event)
 
@@ -61,10 +58,7 @@ async def test_successful_saga_checkout(db_session: AsyncSession, monkeypatch):
         "event_id": str(uuid.uuid4()),
         "event_type": "PaymentSuccessEvent",
         "correlation_id": correlation_id,
-        "payload": {
-            "order_id": str(order.id),
-            "transaction_id": "txn_test_12345"
-        }
+        "payload": {"order_id": str(order.id), "transaction_id": "txn_test_12345"},
     }
     await handle_event(payment_success_event)
 
@@ -87,7 +81,7 @@ async def test_failed_payment_triggers_compensation(db_session: AsyncSession, mo
     # 1. Create order
     payload = OrderCreate(
         items=[OrderItemCreate(product_id=item_id, quantity=2, unit_price=Decimal("15.00"))],
-        idempotency_key=idempotency_key
+        idempotency_key=idempotency_key,
     )
     order = await service.create_order(user_id, payload)
     assert order.status == OrderStatus.PENDING.value
@@ -102,10 +96,7 @@ async def test_failed_payment_triggers_compensation(db_session: AsyncSession, mo
         "event_id": str(uuid.uuid4()),
         "event_type": "PaymentFailedEvent",
         "correlation_id": correlation_id,
-        "payload": {
-            "order_id": str(order.id),
-            "reason": "Card declined."
-        }
+        "payload": {"order_id": str(order.id), "reason": "Card declined."},
     }
     await handle_event(payment_failed_event)
 
@@ -133,7 +124,7 @@ async def test_inbox_deduplication(db_session: AsyncSession, monkeypatch):
 
     payload = OrderCreate(
         items=[OrderItemCreate(product_id=item_id, quantity=1, unit_price=Decimal("5.00"))],
-        idempotency_key=idempotency_key
+        idempotency_key=idempotency_key,
     )
     order = await service.create_order(user_id, payload)
     await db_session.commit()
@@ -144,10 +135,7 @@ async def test_inbox_deduplication(db_session: AsyncSession, monkeypatch):
         "event_id": event_id,
         "event_type": "InventoryReservedEvent",
         "correlation_id": "corr-dedup-1",
-        "payload": {
-            "order_id": str(order.id),
-            "items": [{"product_id": str(item_id), "quantity": 1}]
-        }
+        "payload": {"order_id": str(order.id), "items": [{"product_id": str(item_id), "quantity": 1}]},
     }
 
     # First delivery

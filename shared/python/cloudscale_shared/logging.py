@@ -6,6 +6,7 @@ Provides:
 - Service name binding
 - Standard library logging redirection to structlog
 """
+
 import logging
 import sys
 from typing import Any
@@ -13,9 +14,7 @@ from typing import Any
 import structlog
 
 
-def _add_trace_context(
-    logger: Any, method_name: str, event_dict: dict[str, Any]
-) -> dict[str, Any]:
+def _add_trace_context(logger: Any, method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
     """Structlog processor that injects OTel trace_id and span_id into log events."""
     try:
         from opentelemetry import trace

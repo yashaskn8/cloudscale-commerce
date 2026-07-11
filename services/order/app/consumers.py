@@ -11,6 +11,7 @@ Saga State Machine:
     PENDING/STOCK_RESERVED ──[PaymentFailedEvent]──► CANCELLED
                                                       └──► emit OrderCancelledEvent (compensation)
 """
+
 import asyncio
 import uuid
 from typing import Any
@@ -103,9 +104,7 @@ async def handle_event(event: dict[str, Any]):
 async def _handle_inventory_reserved(db, payload: dict, correlation_id: str):
     """Transition: PENDING → STOCK_RESERVED."""
     order_id = payload.get("order_id")
-    result = await db.execute(
-        select(Order).where(Order.id == uuid.UUID(order_id))
-    )
+    result = await db.execute(select(Order).where(Order.id == uuid.UUID(order_id)))
     order = result.scalar_one_or_none()
     if order and order.status == OrderStatus.PENDING.value:
         order.status = OrderStatus.STOCK_RESERVED.value
@@ -115,9 +114,7 @@ async def _handle_inventory_reserved(db, payload: dict, correlation_id: str):
 async def _handle_inventory_reserve_failed(db, payload: dict, correlation_id: str):
     """Transition: PENDING → CANCELLED_NO_STOCK."""
     order_id = payload.get("order_id")
-    result = await db.execute(
-        select(Order).where(Order.id == uuid.UUID(order_id))
-    )
+    result = await db.execute(select(Order).where(Order.id == uuid.UUID(order_id)))
     order = result.scalar_one_or_none()
     if order and order.status in (OrderStatus.PENDING.value, OrderStatus.STOCK_RESERVED.value):
         order.status = OrderStatus.CANCELLED_NO_STOCK.value
@@ -131,9 +128,7 @@ async def _handle_inventory_reserve_failed(db, payload: dict, correlation_id: st
 async def _handle_payment_success(db, payload: dict, correlation_id: str):
     """Transition: STOCK_RESERVED → CONFIRMED."""
     order_id = payload.get("order_id")
-    result = await db.execute(
-        select(Order).where(Order.id == uuid.UUID(order_id))
-    )
+    result = await db.execute(select(Order).where(Order.id == uuid.UUID(order_id)))
     order = result.scalar_one_or_none()
     if order and order.status == OrderStatus.STOCK_RESERVED.value:
         order.status = OrderStatus.CONFIRMED.value
@@ -143,9 +138,7 @@ async def _handle_payment_success(db, payload: dict, correlation_id: str):
 async def _handle_payment_failed(db, payload: dict, correlation_id: str):
     """Transition: STOCK_RESERVED → CANCELLED, emit OrderCancelledEvent for compensation."""
     order_id = payload.get("order_id")
-    result = await db.execute(
-        select(Order).where(Order.id == uuid.UUID(order_id))
-    )
+    result = await db.execute(select(Order).where(Order.id == uuid.UUID(order_id)))
     order = result.scalar_one_or_none()
     if not order or order.status not in (
         OrderStatus.PENDING.value,
@@ -156,10 +149,7 @@ async def _handle_payment_failed(db, payload: dict, correlation_id: str):
     order.status = OrderStatus.CANCELLED.value
 
     # Build compensation event with item details for inventory release
-    items_to_release = [
-        {"product_id": str(i.product_id), "quantity": i.quantity}
-        for i in order.items
-    ]
+    items_to_release = [{"product_id": str(i.product_id), "quantity": i.quantity} for i in order.items]
 
     cancel_event = Event(
         event_type="OrderCancelledEvent",
@@ -168,9 +158,7 @@ async def _handle_payment_failed(db, payload: dict, correlation_id: str):
     )
 
     # Write compensation event to outbox (same transaction as status change)
-    write_outbox(
-        db, OutboxMessage, settings.ORDER_EVENTS_TOPIC, cancel_event, key=order_id
-    )
+    write_outbox(db, OutboxMessage, settings.ORDER_EVENTS_TOPIC, cancel_event, key=order_id)
 
     logger.info(
         "Order CANCELLED — compensation event written to outbox",

@@ -3,6 +3,7 @@ from locust import HttpUser, between, task
 
 class CloudScaleUser(HttpUser):
     """Simulates a concurrent user on the CloudScale Commerce platform."""
+
     wait_time = between(1, 3)
 
     def on_start(self):
@@ -40,12 +41,5 @@ class CloudScaleUser(HttpUser):
         if self.token:
             headers["Authorization"] = f"Bearer {self.token}"
 
-        payload = {
-            "items": [
-                {
-                    "product_id": str(self.product_id),
-                    "quantity": 1
-                }
-            ]
-        }
+        payload = {"items": [{"product_id": str(self.product_id), "quantity": 1}]}
         self.client.post("/api/v1/orders", json=payload, headers=headers)

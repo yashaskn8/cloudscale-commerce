@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 T = TypeVar("T")
 
+
 class AbstractRepository(ABC, Generic[T]):
     """Abstract Base Class for Data Access Repositories."""
 
@@ -29,6 +30,7 @@ class AbstractRepository(ABC, Generic[T]):
     async def remove(self, entity: T) -> None:
         """Removes an entity from the data store."""
         pass
+
 
 class SQLAlchemyRepository(AbstractRepository[T]):
     """SQLAlchemy Async implementation of the Repository Pattern."""

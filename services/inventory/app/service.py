@@ -3,6 +3,7 @@
 Coordinates stock queries and updates.
 Uses distributed locking (Redis Redlock-like) to protect critical restock blocks.
 """
+
 import uuid
 
 import structlog
@@ -41,11 +42,7 @@ class InventoryService:
             inventory = await self.repo.get_by_product_id(product_id)
             if not inventory:
                 logger.info("No prior inventory entry. Creating new restock entry.", product_id=str(product_id))
-                inventory = Inventory(
-                    product_id=product_id,
-                    available_stock=payload.quantity,
-                    reserved_stock=0
-                )
+                inventory = Inventory(product_id=product_id, available_stock=payload.quantity, reserved_stock=0)
                 await self.repo.add(inventory)
             else:
                 inventory.available_stock += payload.quantity

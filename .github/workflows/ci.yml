@@ -11,10 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v7
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v6
       with:
         python-version: '3.12'
         cache: 'pip'
@@ -22,13 +22,16 @@ jobs:
     - name: Install Linting Tools
       run: |
         python -m pip install --upgrade pip
-        pip install ruff black
+        pip install ruff black mypy
 
     - name: Run Ruff Linter
       run: ruff check . --exclude 'shared/python/cloudscale_shared/grpc/*' --exclude '*/alembic/*'
 
     - name: Run Black Formatter Check
       run: black --check . --exclude '/(shared/python/cloudscale_shared/grpc|.*/alembic)/'
+
+    - name: Run MyPy Type Check
+      run: mypy .
 
     - name: Install Shared Package & Service Dependencies
       run: |
@@ -48,48 +51,48 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v7
 
     - name: Set up Docker Buildx
-      uses: actions/setup-buildx-action@v2
+      uses: docker/setup-buildx-action@v4
 
     - name: Build Auth Service Image
-      uses: docker/build-push-action@v4
+      uses: docker/build-push-action@v7
       with:
         context: .
         file: services/auth/Dockerfile
         push: false
 
     - name: Build Catalog Service Image
-      uses: docker/build-push-action@v4
+      uses: docker/build-push-action@v7
       with:
         context: .
         file: services/catalog/Dockerfile
         push: false
 
     - name: Build Inventory Service Image
-      uses: docker/build-push-action@v4
+      uses: docker/build-push-action@v7
       with:
         context: .
         file: services/inventory/Dockerfile
         push: false
 
     - name: Build Order Service Image
-      uses: docker/build-push-action@v4
+      uses: docker/build-push-action@v7
       with:
         context: .
         file: services/order/Dockerfile
         push: false
 
     - name: Build Payment Service Image
-      uses: docker/build-push-action@v4
+      uses: docker/build-push-action@v7
       with:
         context: .
         file: services/payment/Dockerfile
         push: false
 
     - name: Build Notification Service Image
-      uses: docker/build-push-action@v4
+      uses: docker/build-push-action@v7
       with:
         context: .
         file: services/notification/Dockerfile

@@ -22,12 +22,8 @@ async def test_session_manager(test_engine) -> DatabaseSessionManager:
     manager = DatabaseSessionManager("sqlite+aiosqlite:///:memory:")
     manager._write_engine = test_engine
     manager._read_engine = test_engine
-    manager._write_sessionmaker = async_sessionmaker(
-        test_engine, class_=AsyncSession, expire_on_commit=False
-    )
-    manager._read_sessionmaker = async_sessionmaker(
-        test_engine, class_=AsyncSession, expire_on_commit=False
-    )
+    manager._write_sessionmaker = async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
+    manager._read_sessionmaker = async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
     return manager
 
 

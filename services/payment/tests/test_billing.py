@@ -27,7 +27,9 @@ async def test_billing_subscription_flow(db_session):
             assert sub.plan_tier == "free"
 
             # 2. Update subscription to growth
-            response = await ac.post("/api/v1/billing/subscriptions?plan_tier=growth", headers={"X-Tenant-ID": "tenant-test-123"})
+            response = await ac.post(
+                "/api/v1/billing/subscriptions?plan_tier=growth", headers={"X-Tenant-ID": "tenant-test-123"}
+            )
             assert response.status_code == 200
             res_data = response.json()
             assert res_data["status"] == "success"

@@ -10,6 +10,7 @@ class ProductCreate(BaseModel):
     description: str | None = None
     price: Decimal = Field(..., gt=0)
 
+
 class ProductResponse(BaseModel):
     id: uuid.UUID
     sku: str

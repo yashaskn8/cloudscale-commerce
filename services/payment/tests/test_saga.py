@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 async def test_payment_processing_success(db_session: AsyncSession, monkeypatch):
     # Mock producer
     from unittest.mock import AsyncMock
+
     mock_producer = AsyncMock()
     monkeypatch.setattr("app.consumers.producer", mock_producer)
 
@@ -26,14 +27,8 @@ async def test_payment_processing_success(db_session: AsyncSession, monkeypatch)
         "correlation_id": correlation_id,
         "payload": {
             "order_id": str(order_id),
-            "items": [
-                {
-                    "product_id": str(product_id),
-                    "quantity": 2,
-                    "unit_price": 49.99
-                }
-            ]
-        }
+            "items": [{"product_id": str(product_id), "quantity": 2, "unit_price": 49.99}],
+        },
     }
 
     # Process
@@ -59,6 +54,7 @@ async def test_payment_processing_success(db_session: AsyncSession, monkeypatch)
 async def test_payment_processing_failure_rollback_path(db_session: AsyncSession, monkeypatch):
     # Mock producer
     from unittest.mock import AsyncMock
+
     mock_producer = AsyncMock()
     monkeypatch.setattr("app.consumers.producer", mock_producer)
 
@@ -73,14 +69,8 @@ async def test_payment_processing_failure_rollback_path(db_session: AsyncSession
         "correlation_id": correlation_id,
         "payload": {
             "order_id": str(order_id),
-            "items": [
-                {
-                    "product_id": str(product_id),
-                    "quantity": 99,
-                    "unit_price": 1.00
-                }
-            ]
-        }
+            "items": [{"product_id": str(product_id), "quantity": 99, "unit_price": 1.00}],
+        },
     }
 
     # Process

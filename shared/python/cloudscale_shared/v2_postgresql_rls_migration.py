@@ -162,10 +162,7 @@ def generate_full_migration() -> str:
     ]
 
     for table_config in TENANT_TABLES:
-        sections.append(generate_rls_migration(
-            table_config["table"],
-            table_config["tenant_column"]
-        ))
+        sections.append(generate_rls_migration(table_config["table"], table_config["tenant_column"]))
         sections.append("")
 
     return "\n".join(sections)
@@ -191,6 +188,7 @@ def set_tenant_context_sql(tenant_id: str) -> str:
 
 
 # ── Validation Helpers ──────────────────────────────────────────────────────────
+
 
 def validate_rls_coverage(existing_tables: Sequence[str]) -> list[str]:
     """

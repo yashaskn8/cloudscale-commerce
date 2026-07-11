@@ -1,19 +1,17 @@
 import asyncio
 import time
+from collections.abc import Awaitable
 from contextlib import asynccontextmanager
+from typing import Any, cast
 
 import structlog
 from redis.asyncio import Redis
 
 logger = structlog.get_logger()
 
+
 @asynccontextmanager
-async def acquire_lock(
-    redis: Redis,
-    lock_key: str,
-    expire_seconds: int = 10,
-    timeout_seconds: int = 5
-):
+async def acquire_lock(redis: Redis, lock_key: str, expire_seconds: int = 10, timeout_seconds: int = 5):
     """Context manager for distributed locks using Redis."""
     token = str(time.time())
     acquired = False
@@ -25,7 +23,7 @@ async def acquire_lock(
         if res:
             acquired = True
             break
-        await asyncio.sleep(0.05) # Poll with minor delay
+        await asyncio.sleep(0.05)  # Poll with minor delay
 
     if not acquired:
         logger.warn("Distributed lock acquisition timed out", lock_key=lock_key)
@@ -44,7 +42,7 @@ async def acquire_lock(
         end
         """
         try:
-            await redis.eval(lua_release, 1, lock_key, token)
+            await cast(Awaitable[Any], redis.eval(lua_release, 1, lock_key, token))
             logger.debug("Distributed lock released", lock_key=lock_key)
         except Exception as e:
             logger.error("Failed to release distributed lock safely", lock_key=lock_key, error=str(e))

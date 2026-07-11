@@ -13,22 +13,12 @@ async def test_order_repository_crud(db_session: AsyncSession):
     user_id = uuid.uuid4()
 
     # 1. Create order
-    order = Order(
-        user_id=user_id,
-        status="PENDING",
-        total_amount=Decimal("59.98"),
-        idempotency_key="idem-key-test-001"
-    )
+    order = Order(user_id=user_id, status="PENDING", total_amount=Decimal("59.98"), idempotency_key="idem-key-test-001")
     await repo.add(order)
     await db_session.flush()
 
     # Save child item
-    item = OrderItem(
-        order_id=order.id,
-        product_id=uuid.uuid4(),
-        quantity=2,
-        unit_price=Decimal("29.99")
-    )
+    item = OrderItem(order_id=order.id, product_id=uuid.uuid4(), quantity=2, unit_price=Decimal("29.99"))
     db_session.add(item)
     await db_session.flush()
 

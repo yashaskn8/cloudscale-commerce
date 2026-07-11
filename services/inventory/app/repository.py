@@ -2,6 +2,7 @@
 
 Handles database operations on the Inventory aggregate.
 """
+
 import uuid
 
 from app.models import Inventory

@@ -10,6 +10,7 @@ Usage in a service's models.py:
     class InboxMessage(Base, InboxMixin):
         __tablename__ = "inbox_messages"
 """
+
 import uuid
 from datetime import UTC, datetime
 
@@ -25,22 +26,16 @@ logger = structlog.get_logger()
 class InboxMixin:
     """Mixin providing inbox deduplication columns. Inherit alongside your Base."""
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    event_id: Mapped[str] = mapped_column(
-        String(36), unique=True, nullable=False, index=True
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    event_id: Mapped[str] = mapped_column(String(36), unique=True, nullable=False, index=True)
     event_type: Mapped[str] = mapped_column(String(255), nullable=False)
     source_topic: Mapped[str] = mapped_column(String(255), nullable=False)
-    processed_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(UTC), nullable=False
-    )
+    processed_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
 
 
 async def inbox_already_processed(
     session: AsyncSession,
-    inbox_model: type,
+    inbox_model: type[InboxMixin],
     event_id: str,
 ) -> bool:
     """Checks if an event has already been processed (exists in inbox table).
@@ -53,9 +48,7 @@ async def inbox_already_processed(
     Returns:
         True if the event was already processed, False otherwise.
     """
-    stmt = select(func.count()).select_from(inbox_model).where(
-        inbox_model.event_id == event_id
-    )
+    stmt = select(func.count()).select_from(inbox_model).where(inbox_model.event_id == event_id)
     result = await session.execute(stmt)
     count = result.scalar_one()
     if count > 0:

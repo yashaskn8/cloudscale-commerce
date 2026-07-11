@@ -7,6 +7,7 @@ Provides:
 - Timeout policy context managers
 - Prometheus metrics monitoring for retries, breaker states, and bulkhead usage
 """
+
 import asyncio
 import time
 from collections.abc import Callable, Coroutine
@@ -29,35 +30,21 @@ logger = structlog.get_logger()
 # Prometheus Resiliency Metrics
 # ──────────────────────────────────────────────────────────────────────────────
 
-RETRY_COUNT = Counter(
-    "resiliency_retries_total",
-    "Total number of operation retry attempts",
-    ["operation"]
-)
+RETRY_COUNT = Counter("resiliency_retries_total", "Total number of operation retry attempts", ["operation"])
 
 CIRCUIT_BREAKER_STATE = Gauge(
-    "resiliency_circuit_breaker_state",
-    "State of the circuit breaker (0=closed, 1=open, 2=half-open)",
-    ["operation"]
+    "resiliency_circuit_breaker_state", "State of the circuit breaker (0=closed, 1=open, 2=half-open)", ["operation"]
 )
 
 CIRCUIT_BREAKER_FAILURES = Counter(
-    "resiliency_circuit_breaker_failures_total",
-    "Total failure counts registered by circuit breakers",
-    ["operation"]
+    "resiliency_circuit_breaker_failures_total", "Total failure counts registered by circuit breakers", ["operation"]
 )
 
 BULKHEAD_UTILIZATION = Gauge(
-    "resiliency_bulkhead_active_requests",
-    "Active concurrent requests within a bulkhead slot",
-    ["operation"]
+    "resiliency_bulkhead_active_requests", "Active concurrent requests within a bulkhead slot", ["operation"]
 )
 
-BULKHEAD_LIMITS = Gauge(
-    "resiliency_bulkhead_limit",
-    "Limit configuration of the bulkhead semaphore",
-    ["operation"]
-)
+BULKHEAD_LIMITS = Gauge("resiliency_bulkhead_limit", "Limit configuration of the bulkhead semaphore", ["operation"])
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -65,6 +52,7 @@ BULKHEAD_LIMITS = Gauge(
 # ──────────────────────────────────────────────────────────────────────────────
 
 T = TypeVar("T")
+
 
 def retry_with_backoff(
     operation_name: str,
@@ -74,6 +62,7 @@ def retry_with_backoff(
     retry_exceptions: tuple[type[Exception], ...] = (Exception,),
 ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """Decorator applying exponential backoff retry with random jitter."""
+
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -90,22 +79,21 @@ def retry_with_backoff(
             tenacity_retry = retry(
                 reraise=True,
                 stop=stop_after_attempt(max_attempts),
-                wait=wait_exponential_jitter(
-                    initial=min_backoff_seconds,
-                    max=max_backoff_seconds,
-                    exp_base=2
-                ),
+                wait=wait_exponential_jitter(initial=min_backoff_seconds, max=max_backoff_seconds, exp_base=2),
                 retry=retry_if_exception_type(retry_exceptions),
                 before_sleep=before_sleep_cb,
             )
             return tenacity_retry(func)(*args, **kwargs)
+
         return wrapper
+
     return decorator
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 2. Circuit Breaker Pattern
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 class CircuitState(Enum):
     CLOSED = 0
@@ -115,6 +103,7 @@ class CircuitState(Enum):
 
 class CircuitBreakerOpenException(Exception):
     """Exception raised when a circuit breaker is in OPEN state."""
+
     pass
 
 
@@ -173,16 +162,13 @@ def circuit_breaker(
     breaker: CircuitBreaker,
 ) -> Callable[[Callable[..., Coroutine[Any, Any, T]]], Callable[..., Coroutine[Any, Any, T]]]:
     """Decorator wrapping an async call inside a Circuit Breaker pattern."""
-    def decorator(
-        func: Callable[..., Coroutine[Any, Any, T]]
-    ) -> Callable[..., Coroutine[Any, Any, T]]:
+
+    def decorator(func: Callable[..., Coroutine[Any, Any, T]]) -> Callable[..., Coroutine[Any, Any, T]]:
         @wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> T:
             breaker.check_state()
             if breaker.state == CircuitState.OPEN:
-                raise CircuitBreakerOpenException(
-                    f"Circuit breaker {breaker.name} is open. Request rejected."
-                )
+                raise CircuitBreakerOpenException(f"Circuit breaker {breaker.name} is open. Request rejected.")
 
             try:
                 result = await func(*args, **kwargs)
@@ -191,7 +177,9 @@ def circuit_breaker(
             except Exception:
                 breaker.record_failure()
                 raise
+
         return wrapper
+
     return decorator
 
 
@@ -199,8 +187,10 @@ def circuit_breaker(
 # 3. Bulkhead Isolation Pattern
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class BulkheadLimitExceeded(Exception):
     """Exception raised when bulkhead maximum capacity is exceeded."""
+
     pass
 
 
@@ -218,9 +208,7 @@ class Bulkhead:
         """Executes a coroutine checking bulkhead capacity."""
         if self.semaphore.locked():
             logger.warn("Bulkhead limit reached", bulkhead=self.name)
-            raise BulkheadLimitExceeded(
-                f"Bulkhead {self.name} reached limit capacity of {self.max_concurrent}"
-            )
+            raise BulkheadLimitExceeded(f"Bulkhead {self.name} reached limit capacity of {self.max_concurrent}")
 
         BULKHEAD_UTILIZATION.labels(operation=self.name).inc()
         try:
@@ -234,13 +222,14 @@ def bulkhead(
     bulkhead_obj: Bulkhead,
 ) -> Callable[[Callable[..., Coroutine[Any, Any, T]]], Callable[..., Coroutine[Any, Any, T]]]:
     """Decorator executing an async function within a bulkhead boundary."""
-    def decorator(
-        func: Callable[..., Coroutine[Any, Any, T]]
-    ) -> Callable[..., Coroutine[Any, Any, T]]:
+
+    def decorator(func: Callable[..., Coroutine[Any, Any, T]]) -> Callable[..., Coroutine[Any, Any, T]]:
         @wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> T:
             return await bulkhead_obj.execute(func(*args, **kwargs))
+
         return wrapper
+
     return decorator
 
 
@@ -248,11 +237,13 @@ def bulkhead(
 # 4. Timeout Policies
 # ──────────────────────────────────────────────────────────────────────────────
 
-def with_timeout(seconds: float) -> Callable[[Callable[..., Coroutine[Any, Any, T]]], Callable[..., Coroutine[Any, Any, T]]]:
+
+def with_timeout(
+    seconds: float,
+) -> Callable[[Callable[..., Coroutine[Any, Any, T]]], Callable[..., Coroutine[Any, Any, T]]]:
     """Decorator enforcing maximum runtime limit on an async operation."""
-    def decorator(
-        func: Callable[..., Coroutine[Any, Any, T]]
-    ) -> Callable[..., Coroutine[Any, Any, T]]:
+
+    def decorator(func: Callable[..., Coroutine[Any, Any, T]]) -> Callable[..., Coroutine[Any, Any, T]]:
         @wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> T:
             try:
@@ -264,5 +255,7 @@ def with_timeout(seconds: float) -> Callable[[Callable[..., Coroutine[Any, Any, 
                     timeout_seconds=seconds,
                 )
                 raise TimeoutError(f"Operation timed out after {seconds} seconds.")
+
         return wrapper
+
     return decorator

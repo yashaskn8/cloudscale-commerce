@@ -3,6 +3,7 @@
 Encapsulates all database access operations for the User aggregate root.
 Extends the shared SQLAlchemyRepository with domain-specific query methods.
 """
+
 from collections.abc import Sequence
 
 from app.models import User
@@ -29,15 +30,10 @@ class UserRepository(SQLAlchemyRepository[User]):
         # Count query
         count_stmt = select(func.count()).select_from(User)
         total_result = await self.session.execute(count_stmt)
-        total = total_result.scalar_one()
+        total = int(total_result.scalar_one())
 
         # Data query
-        data_stmt = (
-            select(User)
-            .order_by(User.created_at.desc())
-            .offset(params.offset)
-            .limit(params.size)
-        )
+        data_stmt = select(User).order_by(User.created_at.desc()).offset(params.offset).limit(params.size)
         result = await self.session.execute(data_stmt)
         items = result.scalars().all()
         return items, total
@@ -46,4 +42,4 @@ class UserRepository(SQLAlchemyRepository[User]):
         """Checks if a user with the given email already exists."""
         stmt = select(func.count()).select_from(User).where(User.email == email)
         result = await self.session.execute(stmt)
-        return result.scalar_one() > 0
+        return int(result.scalar_one()) > 0

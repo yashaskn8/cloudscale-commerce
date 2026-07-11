@@ -2,7 +2,9 @@
 
 Exposes endpoints for querying catalog items, adding new ones, and performing AI recommendations.
 """
+
 import uuid
+from typing import cast
 
 import structlog
 from app.ai import AIRecommendationService
@@ -20,16 +22,14 @@ router = APIRouter(prefix="/api/v1/products", tags=["Catalog"])
 
 
 def get_catalog_service(
-    db: AsyncSession = Depends(get_db_session),
-    redis: Redis = Depends(get_redis_client)
+    db: AsyncSession = Depends(get_db_session), redis: Redis = Depends(get_redis_client)
 ) -> CatalogService:
     """FastAPI Dependency Injection for CatalogService."""
     return CatalogService(db, redis)
 
 
 def get_ai_service(
-    db: AsyncSession = Depends(get_db_session),
-    redis: Redis = Depends(get_redis_client)
+    db: AsyncSession = Depends(get_db_session), redis: Redis = Depends(get_redis_client)
 ) -> AIRecommendationService:
     """FastAPI Dependency Injection for AIRecommendationService."""
     return AIRecommendationService(db, redis)
@@ -39,7 +39,7 @@ def get_ai_service(
 async def list_products(
     page: int = Query(1, ge=1),
     size: int = Query(10, ge=1, le=100),
-    service: CatalogService = Depends(get_catalog_service)
+    service: CatalogService = Depends(get_catalog_service),
 ) -> Page[ProductResponse]:
     """Retrieve all active catalog products with pagination."""
     params = PageParams(page=page, size=size)
@@ -50,36 +50,28 @@ async def list_products(
 async def get_recommendations(
     product_id: uuid.UUID,
     limit: int = Query(3, ge=1, le=10),
-    ai_service: AIRecommendationService = Depends(get_ai_service)
+    ai_service: AIRecommendationService = Depends(get_ai_service),
 ) -> list[ProductResponse]:
     """Retrieve AI-powered recommendations matching the target product ID."""
-    return await ai_service.get_recommendations(product_id, limit)
+    return cast(list[ProductResponse], await ai_service.get_recommendations(product_id, limit))
 
 
 @router.get("/search/semantic", response_model=list[ProductResponse])
 async def semantic_search(
-    query: str,
-    limit: int = Query(5, ge=1, le=20),
-    ai_service: AIRecommendationService = Depends(get_ai_service)
+    query: str, limit: int = Query(5, ge=1, le=20), ai_service: AIRecommendationService = Depends(get_ai_service)
 ) -> list[ProductResponse]:
     """Perform a fuzzy semantic embedding search simulator."""
-    return await ai_service.semantic_search(query, limit)
+    return cast(list[ProductResponse], await ai_service.semantic_search(query, limit))
 
 
 @router.get("/search/suggestions", response_model=list[str])
-async def get_suggestions(
-    prefix: str,
-    ai_service: AIRecommendationService = Depends(get_ai_service)
-) -> list[str]:
+async def get_suggestions(prefix: str, ai_service: AIRecommendationService = Depends(get_ai_service)) -> list[str]:
     """Retrieve autocomplete product suggestions matching a name query prefix."""
-    return await ai_service.get_suggestions(prefix)
+    return cast(list[str], await ai_service.get_suggestions(prefix))
 
 
 @router.get("/{product_id}", response_model=ProductResponse)
-async def get_product(
-    product_id: uuid.UUID,
-    service: CatalogService = Depends(get_catalog_service)
-) -> ProductResponse:
+async def get_product(product_id: uuid.UUID, service: CatalogService = Depends(get_catalog_service)) -> ProductResponse:
     """Retrieve product details by product ID."""
     return await service.get_product_by_id(product_id)
 
@@ -88,11 +80,10 @@ async def get_product(
     "",
     response_model=ProductResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(RoleChecker(["merchant", "admin"]))]
+    dependencies=[Depends(RoleChecker(["merchant", "admin"]))],
 )
 async def create_product(
-    payload: ProductCreate,
-    service: CatalogService = Depends(get_catalog_service)
+    payload: ProductCreate, service: CatalogService = Depends(get_catalog_service)
 ) -> ProductResponse:
     """Create a new product in the catalog (Requires merchant or admin role)."""
     product = await service.create_product(payload)

@@ -7,6 +7,7 @@ Implements:
 - Password policy enforcement
 - Structured audit logging for security events
 """
+
 import uuid
 from datetime import UTC, datetime
 
@@ -89,9 +90,7 @@ class AuthService:
                 user_agent=user_agent,
                 email=payload.email,
             )
-            raise UnauthorizedException(
-                "Account temporarily locked due to too many failed attempts. Try again later."
-            )
+            raise UnauthorizedException("Account temporarily locked due to too many failed attempts. Try again later.")
 
         user = await self.repo.get_by_email(payload.email)
 
@@ -200,9 +199,7 @@ class AuthService:
 
     async def get_current_user_from_token(self, token: str) -> User:
         """Validates an access token (including revocation check) and returns the User."""
-        payload = decode_token(
-            token, settings.JWT_SECRET_KEY, settings.JWT_ALGORITHM, expected_type="access"
-        )
+        payload = decode_token(token, settings.JWT_SECRET_KEY, settings.JWT_ALGORITHM, expected_type="access")
         jti = payload.get("jti")
         if self.redis and jti and await is_token_revoked(self.redis, jti):
             raise UnauthorizedException("Token has been revoked")

@@ -11,12 +11,15 @@ logger = structlog.get_logger()
 # Thread-safe ContextVar to hold tenant context for SQL queries
 tenant_id_context = contextvars.ContextVar("tenant_id", default="default-tenant")
 
+
 def get_current_tenant() -> str:
     """Helper to retrieve the tenant ID associated with the current request context."""
     return tenant_id_context.get()
 
+
 class CorrelationIdMiddleware(BaseHTTPMiddleware):
     """Middleware that extracts or generates a correlation ID for tracing distributed transactions."""
+
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         correlation_id = request.headers.get("X-Correlation-ID") or request.headers.get("x-correlation-id")
         if not correlation_id:
@@ -27,7 +30,7 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
             correlation_id=correlation_id,
             path=request.url.path,
             method=request.method,
-            client_host=request.client.host if request.client else "unknown"
+            client_host=request.client.host if request.client else "unknown",
         )
 
         start_time = time.perf_counter()
@@ -40,17 +43,21 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
             return response
         except Exception as exc:
             duration = time.perf_counter() - start_time
-            logger.exception("Unhandled exception during request processing", error=str(exc), duration_ms=round(duration * 1000, 2))
+            logger.exception(
+                "Unhandled exception during request processing", error=str(exc), duration_ms=round(duration * 1000, 2)
+            )
             from fastapi.responses import JSONResponse
+
             response = JSONResponse(
-                status_code=500,
-                content={"detail": "Internal Server Error", "correlation_id": correlation_id}
+                status_code=500, content={"detail": "Internal Server Error", "correlation_id": correlation_id}
             )
             response.headers["X-Correlation-ID"] = correlation_id
             return response
 
+
 class TenantContextMiddleware(BaseHTTPMiddleware):
     """Middleware that extracts the tenant context header and attaches it to request contextvars."""
+
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         tenant_id = request.headers.get("X-Tenant-ID") or request.headers.get("x-tenant-id") or "default-tenant"
 

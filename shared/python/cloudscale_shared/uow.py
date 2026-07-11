@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from contextlib import AbstractAsyncContextManager
 from typing import Any, Self
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,13 +29,14 @@ class AbstractUnitOfWork(ABC):
         """Rolls back the active transaction."""
         pass
 
+
 class SQLAlchemyUnitOfWork(AbstractUnitOfWork):
     """SQLAlchemy implementation of the Unit of Work Pattern."""
 
     def __init__(self, session_manager: DatabaseSessionManager):
         self.session_manager = session_manager
         self.session: AsyncSession | None = None
-        self._session_ctx = None
+        self._session_ctx: AbstractAsyncContextManager[AsyncSession] | None = None
 
     async def __aenter__(self) -> Self:
         # Start session context

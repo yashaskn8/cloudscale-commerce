@@ -3,6 +3,7 @@
 Consumes events from inventory-events, performs idempotent payment charges,
 records transactions, and writes responses to the transactional outbox.
 """
+
 import asyncio
 import uuid
 from typing import Any
@@ -39,7 +40,7 @@ async def init_kafka():
     consumer = KafkaConsumerWrapper(
         bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
         group_id="payment-service-group",
-        topics=[settings.INVENTORY_EVENTS_TOPIC]
+        topics=[settings.INVENTORY_EVENTS_TOPIC],
     )
     await consumer.start()
 
@@ -105,24 +106,15 @@ async def _process_payment(db, payload: dict[str, Any], correlation_id: str):
         failed_event = Event(
             event_type="PaymentFailedEvent",
             correlation_id=correlation_id,
-            payload={
-                "order_id": order_id,
-                "items": items,
-                "reason": "Card declined. Insufficient funds."
-            }
+            payload={"order_id": order_id, "items": items, "reason": "Card declined. Insufficient funds."},
         )
-        write_outbox(
-            db, OutboxMessage, settings.PAYMENT_EVENTS_TOPIC, failed_event, key=order_id
-        )
+        write_outbox(db, OutboxMessage, settings.PAYMENT_EVENTS_TOPIC, failed_event, key=order_id)
     else:
         transaction_id = f"txn_{uuid.uuid4().hex[:16]}"
 
         # Save payment record in DB
         payment = Payment(
-            order_id=uuid.UUID(order_id),
-            transaction_id=transaction_id,
-            amount=amount,
-            status="COMPLETED"
+            order_id=uuid.UUID(order_id), transaction_id=transaction_id, amount=amount, status="COMPLETED"
         )
         db.add(payment)
 
@@ -131,12 +123,6 @@ async def _process_payment(db, payload: dict[str, Any], correlation_id: str):
         success_event = Event(
             event_type="PaymentSuccessEvent",
             correlation_id=correlation_id,
-            payload={
-                "order_id": order_id,
-                "items": items,
-                "transaction_id": transaction_id
-            }
+            payload={"order_id": order_id, "items": items, "transaction_id": transaction_id},
         )
-        write_outbox(
-            db, OutboxMessage, settings.PAYMENT_EVENTS_TOPIC, success_event, key=order_id
-        )
+        write_outbox(db, OutboxMessage, settings.PAYMENT_EVENTS_TOPIC, success_event, key=order_id)

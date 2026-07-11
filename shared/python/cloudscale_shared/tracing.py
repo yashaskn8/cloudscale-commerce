@@ -6,6 +6,7 @@ Provides:
 - Kafka trace context injection/extraction helpers
 - Utility to get current trace/span IDs for log enrichment
 """
+
 import os
 from typing import Any
 
@@ -33,9 +34,7 @@ def setup_tracing(
         otlp_endpoint: OTLP collector gRPC endpoint. If None, uses env var
                         OTEL_EXPORTER_OTLP_ENDPOINT or defaults to localhost:4317.
     """
-    endpoint = otlp_endpoint or os.environ.get(
-        "OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317"
-    )
+    endpoint = otlp_endpoint or os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
 
     resource = Resource.create({SERVICE_NAME: service_name})
     provider = TracerProvider(resource=resource)

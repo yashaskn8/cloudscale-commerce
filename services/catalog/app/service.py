@@ -3,7 +3,9 @@
 Implements catalog management operations with a multi-layer Cache-Aside pattern (L1/L2)
 and Circuit Breakers to handle database degradation gracefully.
 """
+
 import uuid
+from typing import Any, cast
 
 import structlog
 from app.config import settings
@@ -58,7 +60,9 @@ class CatalogService:
         current_count = await self.repo.count_tenant_products()
         if current_count >= max_limit:
             logger.warn("Product registration failed - Quota limit exceeded", tenant_id=tenant_id, plan_tier=plan_tier)
-            raise ValidationException(f"Catalog item quota limit of {max_limit} exceeded for plan '{plan_tier}'. Please upgrade.")
+            raise ValidationException(
+                f"Catalog item quota limit of {max_limit} exceeded for plan '{plan_tier}'. Please upgrade."
+            )
 
         if await self.repo.exists_by_sku(payload.sku):
             logger.warn("Product registration failed - SKU already exists", sku=payload.sku)
@@ -70,7 +74,7 @@ class CatalogService:
             description=payload.description,
             price=payload.price,
             is_active=True,
-            tenant_id=tenant_id
+            tenant_id=tenant_id,
         )
         await self.repo.add(new_product)
         await self.session.flush()
@@ -87,9 +91,9 @@ class CatalogService:
         # We define a helper that operates inside the cache scope
 
         @cache_aside(key_prefix="catalog_product", ttl_seconds=settings.PRODUCT_CACHE_TTL_SECONDS)
-        async def _get_cached_product(pid_str: str) -> dict:
+        async def _get_cached_product(pid_str: str) -> dict[str, Any]:
             product = await self._fetch_product_from_db(uuid.UUID(pid_str))
-            return ProductResponse.model_validate(product).model_dump()
+            return cast(dict[str, Any], ProductResponse.model_validate(product).model_dump())
 
         res_dict = await _get_cached_product(str(product_id))
         return ProductResponse.model_validate(res_dict)
@@ -98,11 +102,11 @@ class CatalogService:
         """Lists active products with pagination, checking cache and database."""
 
         @cache_aside(key_prefix="catalog_list", ttl_seconds=60)
-        async def _get_cached_list(tenant_id: str, page: int, size: int) -> dict:
+        async def _get_cached_list(tenant_id: str, page: int, size: int) -> dict[str, Any]:
             items, total = await self._fetch_list_from_db(PageParams(page=page, size=size))
             product_responses = [ProductResponse.model_validate(p) for p in items]
             page_result = Page.create(product_responses, total, PageParams(page=page, size=size))
-            return page_result.model_dump()
+            return cast(dict[str, Any], page_result.model_dump())
 
         res_dict = await _get_cached_list(get_current_tenant(), params.page, params.size)
         return Page[ProductResponse].model_validate(res_dict)
@@ -124,7 +128,8 @@ class CatalogService:
     @retry_with_backoff("catalog_db_list", max_attempts=3)
     async def _fetch_list_from_db(self, params: PageParams) -> tuple[list[Product], int]:
         """Fetch paginated products with retry and circuit breaker logic."""
-        return await self.repo.list_active_paginated(params)
+        items, total = await self.repo.list_active_paginated(params)
+        return list(items), total
 
     # ──────────────────────────────────────────────────────────────────────────────
     # Cache Eviction Helpers
@@ -135,12 +140,16 @@ class CatalogService:
         try:
             # Clear L1 local cache entries related to catalog_list
             from cloudscale_shared.cache import l1_cache
+
             l1_cache.clear()
 
             # Evict L2 entries
-            keys = await self.redis.keys("v1:catalog_list:*")
+            redis = self.redis
+            if redis is None:
+                return
+            keys = await redis.keys("v1:catalog_list:*")
             if keys:
-                await self.redis.delete(*keys)
+                await redis.delete(*keys)
                 logger.info("Evicted catalog list caches", count=len(keys))
         except Exception as e:
             logger.error("Failed to invalidate list caches", error=str(e))

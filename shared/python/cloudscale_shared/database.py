@@ -18,7 +18,7 @@ logger = structlog.get_logger()
 DB_CONNECTIONS_ACTIVE = Gauge(
     "db_active_sessions",
     "Current active database sessions created by the session manager",
-    ["service", "type"]  # type: read / write
+    ["service", "type"],  # read/write session label
 )
 
 
@@ -46,22 +46,14 @@ class DatabaseSessionManager:
         # Initialize Primary Write Engine
         self._write_engine = create_async_engine(write_url, **engine_kwargs)
         self._write_sessionmaker = async_sessionmaker(
-            bind=self._write_engine,
-            class_=AsyncSession,
-            expire_on_commit=False,
-            autocommit=False,
-            autoflush=False
+            bind=self._write_engine, class_=AsyncSession, expire_on_commit=False, autocommit=False, autoflush=False
         )
 
         # Initialize Read Replica Engine (Fallback to Write if not provided)
         self._read_url = read_url or write_url
         self._read_engine = create_async_engine(self._read_url, **engine_kwargs)
         self._read_sessionmaker = async_sessionmaker(
-            bind=self._read_engine,
-            class_=AsyncSession,
-            expire_on_commit=False,
-            autocommit=False,
-            autoflush=False
+            bind=self._read_engine, class_=AsyncSession, expire_on_commit=False, autocommit=False, autoflush=False
         )
 
         logger.info(
@@ -114,11 +106,10 @@ class DatabaseSessionManager:
 # Redis Manager
 class RedisManager:
     """Manages asynchronous Redis connection pool lifecycle."""
+
     def __init__(self, url: str):
         self.pool = ConnectionPool.from_url(
-            url,
-            decode_responses=True,
-            max_connections=50  # Increased for higher load profiles
+            url, decode_responses=True, max_connections=50  # Increased for higher load profiles
         )
 
     async def close(self) -> None:
@@ -184,6 +175,7 @@ async def get_redis_client() -> AsyncIterator[Redis]:
 # ──────────────────────────────────────────────────────────────────────────────
 # Cursor Pagination Helper
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 async def cursor_paginate(
     session: AsyncSession,

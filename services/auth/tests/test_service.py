@@ -12,20 +12,14 @@ async def test_auth_service_operations(db_session: AsyncSession):
 
     # 1. Password policy violation check (fails uppercase/special characters check, but passes length)
     invalid_register = UserRegister(
-        email="weak@cloudscale.com",
-        password="password123",
-        first_name="Weak",
-        last_name="Password"
+        email="weak@cloudscale.com", password="password123", first_name="Weak", last_name="Password"
     )
     with pytest.raises(ValidationException):
         await service.register_user(invalid_register)
 
     # 2. Register User with compliant password
     register_payload = UserRegister(
-        email="service_test@cloudscale.com",
-        password="SecurePass123!",
-        first_name="Alice",
-        last_name="Wonderland"
+        email="service_test@cloudscale.com", password="SecurePass123!", first_name="Alice", last_name="Wonderland"
     )
     user = await service.register_user(register_payload)
     assert user.id is not None
@@ -37,18 +31,12 @@ async def test_auth_service_operations(db_session: AsyncSession):
         await service.register_user(register_payload)
 
     # 4. Authenticate User (Successful)
-    login_payload = UserLogin(
-        email="service_test@cloudscale.com",
-        password="SecurePass123!"
-    )
+    login_payload = UserLogin(email="service_test@cloudscale.com", password="SecurePass123!")
     tokens = await service.authenticate_user(login_payload)
     assert tokens.access_token is not None
     assert tokens.refresh_token is not None
 
     # 5. Authenticate User (Failed password)
-    bad_login = UserLogin(
-        email="service_test@cloudscale.com",
-        password="wrong_password"
-    )
+    bad_login = UserLogin(email="service_test@cloudscale.com", password="wrong_password")
     with pytest.raises(UnauthorizedException):
         await service.authenticate_user(bad_login)

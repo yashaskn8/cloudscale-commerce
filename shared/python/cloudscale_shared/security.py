@@ -9,8 +9,10 @@ Provides:
 - Account lockout tracking
 - Audit logging helpers
 """
+
 import uuid
 from datetime import UTC, datetime, timedelta
+from typing import Any, cast
 
 import jwt
 import structlog
@@ -32,7 +34,7 @@ logger = structlog.get_logger()
 # ──────────────────────────────────────────────────────────────────────────────
 
 _ph = PasswordHasher(
-    time_cost=3,        # iterations
+    time_cost=3,  # iterations
     memory_cost=65536,  # 64 MB
     parallelism=4,
     hash_len=32,
@@ -42,7 +44,7 @@ _ph = PasswordHasher(
 
 def hash_password(password: str) -> str:
     """Hashes a password using Argon2id with OWASP-recommended parameters."""
-    return _ph.hash(password)
+    return cast(str, _ph.hash(password))
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -55,13 +57,14 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     if hashed_password.startswith("$2b$") or hashed_password.startswith("$2a$"):
         try:
             from passlib.context import CryptContext
+
             legacy_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
-            return legacy_ctx.verify(plain_password, hashed_password)
+            return bool(legacy_ctx.verify(plain_password, hashed_password))
         except Exception:
             return False
 
     try:
-        return _ph.verify(hashed_password, plain_password)
+        return bool(_ph.verify(hashed_password, plain_password))
     except (VerifyMismatchError, InvalidHashError):
         return False
 
@@ -70,12 +73,13 @@ def password_needs_rehash(hashed_password: str) -> bool:
     """Checks if a stored hash should be upgraded to current Argon2id parameters."""
     if hashed_password.startswith("$2b$") or hashed_password.startswith("$2a$"):
         return True  # Legacy bcrypt should be rehashed
-    return _ph.check_needs_rehash(hashed_password)
+    return bool(_ph.check_needs_rehash(hashed_password))
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Password Policy Validation
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 def validate_password_policy(password: str) -> list[str]:
     """Validates password against enterprise security policy.
@@ -101,6 +105,7 @@ def validate_password_policy(password: str) -> list[str]:
 # ──────────────────────────────────────────────────────────────────────────────
 # JWT Token Management
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 def create_token_pair(
     user_id: str,
@@ -143,10 +148,10 @@ def decode_token(
     secret_key: str,
     algorithm: str = "HS256",
     expected_type: str = "access",
-) -> dict:
+) -> dict[str, Any]:
     """Decodes and validates a JWT token. Raises UnauthorizedException on failure."""
     try:
-        payload = jwt.decode(token, secret_key, algorithms=[algorithm])
+        payload = cast(dict[str, Any], jwt.decode(token, secret_key, algorithms=[algorithm]))
         if payload.get("type") != expected_type or payload.get("sub") is None:
             raise UnauthorizedException("Invalid token type or missing subject")
         return payload
@@ -159,6 +164,7 @@ def decode_token(
 # ──────────────────────────────────────────────────────────────────────────────
 # Token Revocation (Redis-backed blacklist)
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 async def revoke_token(redis_client, jti: str, ttl_seconds: int) -> None:
     """Adds a token JTI to the Redis blacklist with a TTL matching its remaining expiry."""
@@ -183,7 +189,7 @@ LOCKOUT_DURATION_SECONDS = 900  # 15 minutes
 async def record_failed_login(redis_client, email: str) -> int:
     """Increments failed login counter for an email. Returns the new count."""
     key = f"lockout:{email}"
-    count = await redis_client.incr(key)
+    count = int(await redis_client.incr(key))
     if count == 1:
         await redis_client.expire(key, LOCKOUT_DURATION_SECONDS)
     logger.warn("Failed login recorded", email=email, attempt=count)
@@ -207,6 +213,7 @@ async def clear_failed_logins(redis_client, email: str) -> None:
 # ──────────────────────────────────────────────────────────────────────────────
 # RBAC: Role-Based Access Control Dependency
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 class RoleChecker:
     """FastAPI dependency that verifies the caller has one of the allowed roles.
@@ -238,6 +245,7 @@ class RoleChecker:
 # ──────────────────────────────────────────────────────────────────────────────
 # Redis Rate Limiter Dependency
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 class RateLimiter:
     """FastAPI dependency implementing a sliding-window rate limiter backed by Redis.
@@ -281,20 +289,17 @@ class RateLimiter:
 # Security Headers Middleware (OWASP)
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Injects OWASP-recommended HTTP security headers into every response."""
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "no-referrer"
-        response.headers["Strict-Transport-Security"] = (
-            "max-age=31536000; includeSubDomains"
-        )
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         response.headers["Content-Security-Policy"] = "default-src 'self'"
         response.headers["Cache-Control"] = "no-store"
         response.headers["Pragma"] = "no-cache"
@@ -304,6 +309,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 # ──────────────────────────────────────────────────────────────────────────────
 # Audit Logging Helpers
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 def audit_log(
     event_name: str,

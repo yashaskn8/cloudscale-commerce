@@ -8,10 +8,7 @@ from cloudscale_shared.events import KafkaConsumerWrapper
 async def test_consumer_retry_and_dlq(monkeypatch):
     # Create wrapper
     wrapper = KafkaConsumerWrapper(
-        bootstrap_servers="localhost:9092",
-        group_id="test-group",
-        topics=["order-events"],
-        max_retries=2
+        bootstrap_servers="localhost:9092", group_id="test-group", topics=["order-events"], max_retries=2
     )
 
     # Mock the internal retry/DLQ producer
@@ -30,7 +27,7 @@ async def test_consumer_retry_and_dlq(monkeypatch):
                 "event_type": "OrderCreatedEvent",
                 "correlation_id": "corr-123",
                 "payload": {},
-                "retry_count": 0
+                "retry_count": 0,
             }
 
     msg = MockMessage()

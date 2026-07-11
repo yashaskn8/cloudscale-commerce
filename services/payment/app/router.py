@@ -5,6 +5,7 @@ Provides subscription management, invoice history, entitlement checking,
 and a production-grade Stripe webhook receiver with HMAC-SHA256 signature
 verification and replay attack protection.
 """
+
 import hashlib
 import hmac
 import json
@@ -41,6 +42,7 @@ STRIPE_PRICE_TO_TIER = {
 
 # ── Stripe Signature Verification ───────────────────────────────────────────────
 
+
 def verify_stripe_signature(payload: bytes, signature_header: str, secret: str) -> bool:
     """
     Verify Stripe webhook signature using HMAC-SHA256.
@@ -76,11 +78,7 @@ def verify_stripe_signature(payload: bytes, signature_header: str, secret: str) 
 
         # Reconstruct signed payload and compute HMAC
         signed_payload = f"{timestamp}.".encode() + payload
-        computed_sig = hmac.new(
-            secret.encode(),
-            signed_payload,
-            hashlib.sha256
-        ).hexdigest()
+        computed_sig = hmac.new(secret.encode(), signed_payload, hashlib.sha256).hexdigest()
 
         return hmac.compare_digest(computed_sig, expected_sig)
 
@@ -90,6 +88,7 @@ def verify_stripe_signature(payload: bytes, signature_header: str, secret: str) 
 
 
 # ── Subscription Endpoints ──────────────────────────────────────────────────────
+
 
 @router.get("/subscriptions/active")
 async def get_active_subscription(db: AsyncSession = Depends(get_db_session)):
@@ -107,7 +106,7 @@ async def get_active_subscription(db: AsyncSession = Depends(get_db_session)):
         "tenant_id": sub.tenant_id,
         "plan_tier": sub.plan_tier,
         "status": sub.status,
-        "limits": PLAN_LIMITS.get(sub.plan_tier, PLAN_LIMITS["free"])
+        "limits": PLAN_LIMITS.get(sub.plan_tier, PLAN_LIMITS["free"]),
     }
 
 
@@ -129,20 +128,11 @@ async def update_subscription(plan_tier: str, db: AsyncSession = Depends(get_db_
         sub.status = "active"
 
     invoice_amounts = {"free": 0.00, "growth": 49.00, "enterprise": 299.00}
-    invoice = Invoice(
-        tenant_id=tenant,
-        amount=Decimal(invoice_amounts[plan_tier]),
-        currency="USD",
-        status="paid"
-    )
+    invoice = Invoice(tenant_id=tenant, amount=Decimal(invoice_amounts[plan_tier]), currency="USD", status="paid")
     db.add(invoice)
     await db.commit()
 
-    return {
-        "status": "success",
-        "plan_tier": sub.plan_tier,
-        "invoice_id": str(invoice.id)
-    }
+    return {"status": "success", "plan_tier": sub.plan_tier, "invoice_id": str(invoice.id)}
 
 
 @router.get("/invoices")
@@ -162,20 +152,14 @@ async def get_entitlements(db: AsyncSession = Depends(get_db_session)):
     sub = res.scalar_one_or_none()
     tier = sub.plan_tier if sub else "free"
 
-    return {
-        "tenant_id": tenant,
-        "plan_tier": tier,
-        "limits": PLAN_LIMITS.get(tier, PLAN_LIMITS["free"])
-    }
+    return {"tenant_id": tenant, "plan_tier": tier, "limits": PLAN_LIMITS.get(tier, PLAN_LIMITS["free"])}
 
 
 # ── Stripe Webhook Receiver ────────────────────────────────────────────────────
 
+
 @router.post("/webhooks/stripe", status_code=status.HTTP_200_OK)
-async def handle_stripe_webhook(
-    request: Request,
-    db: AsyncSession = Depends(get_db_session)
-):
+async def handle_stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_session)):
     """
     Process incoming Stripe webhook events with cryptographic signature verification.
 
@@ -243,10 +227,7 @@ async def handle_stripe_webhook(
     elif event_type == "invoice.payment_succeeded":
         amount = Decimal(str(event_data.get("amount_paid", 0))) / 100  # Stripe sends cents
         invoice = Invoice(
-            tenant_id=tenant_id,
-            amount=amount,
-            currency=event_data.get("currency", "usd").upper(),
-            status="paid"
+            tenant_id=tenant_id, amount=amount, currency=event_data.get("currency", "usd").upper(), status="paid"
         )
         db.add(invoice)
         await db.commit()

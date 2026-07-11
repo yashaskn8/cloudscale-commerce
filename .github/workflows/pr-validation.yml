@@ -10,10 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -29,6 +29,9 @@ jobs:
       - name: Run Black Formatter Check
         run: black --check .
 
+      - name: Run MyPy Type Check
+        run: mypy .
+
   test-services:
     name: Test Suite (${{ matrix.service }})
     needs: lint-and-format
@@ -39,10 +42,10 @@ jobs:
         service: [auth, catalog, inventory, order, payment, notification]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -54,7 +57,7 @@ jobs:
           if [ -f services/${{ matrix.service }}/requirements.txt ]; then
             pip install -r services/${{ matrix.service }}/requirements.txt
           fi
-          pip install pytest pytest-asyncio pytest-cov
+          pip install pytest pytest-asyncio pytest-cov httpx
 
       - name: Run Tests
         env:
@@ -63,7 +66,7 @@ jobs:
           pytest --asyncio-mode=auto --cov=services/${{ matrix.service }}/app --cov-report=xml services/${{ matrix.service }}/tests/
 
       - name: Upload Coverage Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-${{ matrix.service }}
           path: coverage.xml

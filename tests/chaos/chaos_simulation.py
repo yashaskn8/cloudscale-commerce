@@ -3,6 +3,7 @@
 Simulates network dropouts, database degradation, and Redis caching outages
 to verify that the platform degrades gracefully instead of crashing.
 """
+
 import asyncio
 from unittest.mock import AsyncMock, patch
 
@@ -73,7 +74,7 @@ async def test_chaos_cache_aside_redis_outage():
     mock_product.price = __import__("decimal").Decimal("99.99")
     mock_product.is_active = True
 
-    with patch.object(service.repo, 'get_by_id', return_value=mock_product):
+    with patch.object(service.repo, "get_by_id", return_value=mock_product):
         # Call should succeed by falling back to DB, logging the Redis error
         res = await service.get_product_by_id(uuid_val)
         assert res is not None

@@ -2,6 +2,7 @@
 
 Handles database querying and state changes for Product aggregates.
 """
+
 from collections.abc import Sequence
 
 from app.models import Product
@@ -20,11 +21,7 @@ class ProductRepository(SQLAlchemyRepository[Product]):
 
     async def get_by_sku(self, sku: str) -> Product | None:
         """Retrieves a product by its unique SKU within current tenant context."""
-        stmt = (
-            select(Product)
-            .where(Product.sku == sku)
-            .where(Product.tenant_id == get_current_tenant())
-        )
+        stmt = select(Product).where(Product.sku == sku).where(Product.tenant_id == get_current_tenant())
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -40,7 +37,7 @@ class ProductRepository(SQLAlchemyRepository[Product]):
             .where(Product.tenant_id == tenant)
         )
         total_result = await self.session.execute(count_stmt)
-        total = total_result.scalar_one()
+        total = int(total_result.scalar_one())
 
         # Paginated data in tenant
         data_stmt = (
@@ -64,7 +61,7 @@ class ProductRepository(SQLAlchemyRepository[Product]):
             .where(Product.tenant_id == get_current_tenant())
         )
         result = await self.session.execute(stmt)
-        return result.scalar_one() > 0
+        return int(result.scalar_one()) > 0
 
     async def count_tenant_products(self) -> int:
         """Counts all active products belonging to the current tenant."""
@@ -75,4 +72,4 @@ class ProductRepository(SQLAlchemyRepository[Product]):
             .where(Product.tenant_id == get_current_tenant())
         )
         result = await self.session.execute(stmt)
-        return result.scalar_one()
+        return int(result.scalar_one())

@@ -10,9 +10,11 @@ class OrderItemCreate(BaseModel):
     quantity: int = Field(..., gt=0)
     unit_price: Decimal = Field(..., gt=0)
 
+
 class OrderCreate(BaseModel):
     items: list[OrderItemCreate] = Field(..., min_length=1)
     idempotency_key: str = Field(..., min_length=10)
+
 
 class OrderItemResponse(BaseModel):
     product_id: uuid.UUID
@@ -21,6 +23,7 @@ class OrderItemResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
 
 class OrderResponse(BaseModel):
     id: uuid.UUID

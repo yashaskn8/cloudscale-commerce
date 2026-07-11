@@ -17,7 +17,7 @@ async def test_product_repository_crud(db_session: AsyncSession):
         name="Test Widget",
         description="A test widget for unit testing",
         price=Decimal("29.99"),
-        is_active=True
+        is_active=True,
     )
     await repo.add(product)
     await db_session.flush()

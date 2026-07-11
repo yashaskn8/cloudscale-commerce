@@ -37,11 +37,7 @@ def test_kafka_event_trace_propagation():
     tracer = trace.get_tracer("test-tracer")
 
     with tracer.start_as_current_span("test-publisher-span"):
-        event = {
-            "event_type": "TestEvent",
-            "correlation_id": "test-corr-obs",
-            "payload": {}
-        }
+        event = {"event_type": "TestEvent", "correlation_id": "test-corr-obs", "payload": {}}
         # Inject trace context
         injected_event = inject_trace_into_event(event)
         assert "_trace_context" in injected_event

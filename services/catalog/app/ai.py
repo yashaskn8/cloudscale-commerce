@@ -23,6 +23,7 @@ Why not use sentence-transformers directly?
     architectural pattern (embed → index → search → cache) without the
     infrastructure overhead. The swap to a real model is a config change.
 """
+
 import hashlib
 import json
 import math
@@ -42,26 +43,10 @@ logger = structlog.get_logger()
 
 # ── Prometheus Telemetry ────────────────────────────────────────────────────────
 
-AI_OPERATIONS = PromCounter(
-    "ai_operations_total",
-    "Total AI operations performed",
-    ["operation", "status"]
-)
-AI_LATENCY = Histogram(
-    "ai_operation_latency_seconds",
-    "Latency of AI operations",
-    ["operation"]
-)
-CACHE_HITS = PromCounter(
-    "ai_cache_hits_total",
-    "Total cache hits for recommendations",
-    ["operation"]
-)
-EMBEDDING_DIM = PromCounter(
-    "ai_embeddings_generated_total",
-    "Total embeddings generated",
-    ["source"]
-)
+AI_OPERATIONS = PromCounter("ai_operations_total", "Total AI operations performed", ["operation", "status"])
+AI_LATENCY = Histogram("ai_operation_latency_seconds", "Latency of AI operations", ["operation"])
+CACHE_HITS = PromCounter("ai_cache_hits_total", "Total cache hits for recommendations", ["operation"])
+EMBEDDING_DIM = PromCounter("ai_embeddings_generated_total", "Total embeddings generated", ["source"])
 
 
 # ── Embedding Engine ────────────────────────────────────────────────────────────
@@ -88,28 +73,110 @@ SEMANTIC_EXPANSIONS: dict[str, list[str]] = {
 }
 
 # IDF weights for common stop words (penalized) vs meaningful terms (boosted)
-STOP_WORDS = frozenset({
-    "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
-    "have", "has", "had", "do", "does", "did", "will", "would", "could",
-    "should", "may", "might", "shall", "can", "need", "dare", "ought",
-    "used", "to", "of", "in", "for", "on", "with", "at", "by", "from",
-    "as", "into", "through", "during", "before", "after", "above", "below",
-    "between", "out", "off", "over", "under", "again", "further", "then",
-    "once", "here", "there", "when", "where", "why", "how", "all", "each",
-    "every", "both", "few", "more", "most", "other", "some", "such", "no",
-    "nor", "not", "only", "own", "same", "so", "than", "too", "very",
-    "and", "but", "or", "yet", "it", "its", "this", "that", "these", "those",
-})
+STOP_WORDS = frozenset(
+    {
+        "the",
+        "a",
+        "an",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "been",
+        "being",
+        "have",
+        "has",
+        "had",
+        "do",
+        "does",
+        "did",
+        "will",
+        "would",
+        "could",
+        "should",
+        "may",
+        "might",
+        "shall",
+        "can",
+        "need",
+        "dare",
+        "ought",
+        "used",
+        "to",
+        "of",
+        "in",
+        "for",
+        "on",
+        "with",
+        "at",
+        "by",
+        "from",
+        "as",
+        "into",
+        "through",
+        "during",
+        "before",
+        "after",
+        "above",
+        "below",
+        "between",
+        "out",
+        "off",
+        "over",
+        "under",
+        "again",
+        "further",
+        "then",
+        "once",
+        "here",
+        "there",
+        "when",
+        "where",
+        "why",
+        "how",
+        "all",
+        "each",
+        "every",
+        "both",
+        "few",
+        "more",
+        "most",
+        "other",
+        "some",
+        "such",
+        "no",
+        "nor",
+        "not",
+        "only",
+        "own",
+        "same",
+        "so",
+        "than",
+        "too",
+        "very",
+        "and",
+        "but",
+        "or",
+        "yet",
+        "it",
+        "its",
+        "this",
+        "that",
+        "these",
+        "those",
+    }
+)
 
 
 def _tokenize(text: str) -> list[str]:
     """Lowercase, strip punctuation, remove stop words, return token list."""
     cleaned = ""
     for ch in text.lower():
-        if ch.isalnum() or ch == ' ':
+        if ch.isalnum() or ch == " ":
             cleaned += ch
         else:
-            cleaned += ' '
+            cleaned += " "
     tokens = [t for t in cleaned.split() if t and t not in STOP_WORDS and len(t) > 1]
     return tokens
 
@@ -196,7 +263,7 @@ class EmbeddingEngine:
             token_hash = hashlib.md5(token.encode(), usedforsecurity=False).hexdigest()
             num_projections = 3  # Each token activates 3 dimensions
             for i in range(num_projections):
-                segment = token_hash[i * 4:(i + 1) * 4]
+                segment = token_hash[i * 4 : (i + 1) * 4]
                 idx = int(segment, 16) % self.dimension
                 # Alternate sign based on hash parity for variance reduction
                 sign = 1.0 if int(segment, 16) % 2 == 0 else -1.0
@@ -216,6 +283,7 @@ class EmbeddingEngine:
 
 
 # ── Vector Index ────────────────────────────────────────────────────────────────
+
 
 class VectorIndex:
     """
@@ -237,7 +305,9 @@ class VectorIndex:
         """Insert or update a vector in the index."""
         self._vectors[item_id] = vector
 
-    def search(self, query_vector: list[float], top_k: int = 5, exclude_ids: set[str] | None = None) -> list[tuple[str, float]]:
+    def search(
+        self, query_vector: list[float], top_k: int = 5, exclude_ids: set[str] | None = None
+    ) -> list[tuple[str, float]]:
         """
         Find the top_k most similar vectors to the query.
 
@@ -263,6 +333,7 @@ class VectorIndex:
 
 # ── AI Recommendation Service ──────────────────────────────────────────────────
 
+
 class AIRecommendationService:
     """
     Production-grade AI service orchestrating:
@@ -286,9 +357,7 @@ class AIRecommendationService:
         if self._indexed:
             return
 
-        result = await self.db.execute(
-            select(Product).where(Product.is_active == True)
-        )
+        result = await self.db.execute(select(Product).where(Product.is_active == True))
         products = result.scalars().all()
 
         if not products:
@@ -296,9 +365,7 @@ class AIRecommendationService:
             return
 
         # Step 1: Fit corpus for IDF statistics
-        corpus = [
-            f"{p.name} {p.description or ''}" for p in products
-        ]
+        corpus = [f"{p.name} {p.description or ''}" for p in products]
         self._engine.fit_corpus(corpus)
 
         # Step 2: Generate embeddings and index them
@@ -342,9 +409,7 @@ class AIRecommendationService:
                 target_id_str = str(product_id)
                 if target_id_str not in self._index._vectors:
                     # Product not in index — fetch and embed it
-                    target_res = await self.db.execute(
-                        select(Product).where(Product.id == product_id)
-                    )
+                    target_res = await self.db.execute(select(Product).where(Product.id == product_id))
                     target = target_res.scalar_one_or_none()
                     if not target:
                         AI_OPERATIONS.labels(operation="recommendations", status="not_found").inc()
@@ -356,11 +421,7 @@ class AIRecommendationService:
                     target_embedding = self._index._vectors[target_id_str]
 
                 # Search for nearest neighbors
-                neighbors = self._index.search(
-                    target_embedding,
-                    top_k=limit,
-                    exclude_ids={target_id_str}
-                )
+                neighbors = self._index.search(target_embedding, top_k=limit, exclude_ids={target_id_str})
 
                 if not neighbors:
                     AI_OPERATIONS.labels(operation="recommendations", status="empty").inc()
@@ -368,9 +429,7 @@ class AIRecommendationService:
 
                 # Fetch product details for matched IDs
                 neighbor_ids = [uuid.UUID(nid) for nid, _ in neighbors]
-                prod_res = await self.db.execute(
-                    select(Product).where(Product.id.in_(neighbor_ids))
-                )
+                prod_res = await self.db.execute(select(Product).where(Product.id.in_(neighbor_ids)))
                 products_map = {str(p.id): p for p in prod_res.scalars().all()}
 
                 # Preserve similarity ranking order
@@ -378,14 +437,16 @@ class AIRecommendationService:
                 for nid, score in neighbors:
                     p = products_map.get(nid)
                     if p:
-                        results.append(ProductResponse(
-                            id=p.id,
-                            sku=p.sku,
-                            name=p.name,
-                            description=p.description or "",
-                            price=p.price,
-                            is_active=p.is_active,
-                        ))
+                        results.append(
+                            ProductResponse(
+                                id=p.id,
+                                sku=p.sku,
+                                name=p.name,
+                                description=p.description or "",
+                                price=p.price,
+                                is_active=p.is_active,
+                            )
+                        )
 
                 # Cache results
                 try:
@@ -453,17 +514,16 @@ class AIRecommendationService:
 
                 if not filtered:
                     # Fallback: return popular/recent products
-                    fallback_res = await self.db.execute(
-                        select(Product)
-                        .where(Product.is_active == True)
-                        .limit(limit)
-                    )
+                    fallback_res = await self.db.execute(select(Product).where(Product.is_active == True).limit(limit))
                     products = fallback_res.scalars().all()
                     results = [
                         ProductResponse(
-                            id=p.id, sku=p.sku, name=p.name,
+                            id=p.id,
+                            sku=p.sku,
+                            name=p.name,
                             description=p.description or "",
-                            price=p.price, is_active=p.is_active,
+                            price=p.price,
+                            is_active=p.is_active,
                         )
                         for p in products
                     ]
@@ -472,20 +532,23 @@ class AIRecommendationService:
 
                 # Fetch product details
                 match_ids = [uuid.UUID(mid) for mid, _ in filtered]
-                prod_res = await self.db.execute(
-                    select(Product).where(Product.id.in_(match_ids))
-                )
+                prod_res = await self.db.execute(select(Product).where(Product.id.in_(match_ids)))
                 products_map = {str(p.id): p for p in prod_res.scalars().all()}
 
                 results = []
                 for mid, score in filtered:
                     p = products_map.get(mid)
                     if p:
-                        results.append(ProductResponse(
-                            id=p.id, sku=p.sku, name=p.name,
-                            description=p.description or "",
-                            price=p.price, is_active=p.is_active,
-                        ))
+                        results.append(
+                            ProductResponse(
+                                id=p.id,
+                                sku=p.sku,
+                                name=p.name,
+                                description=p.description or "",
+                                price=p.price,
+                                is_active=p.is_active,
+                            )
+                        )
 
                 # Cache results (5 min TTL for search)
                 try:
@@ -512,10 +575,7 @@ class AIRecommendationService:
         """Get autocomplete product name suggestions matching a prefix."""
         try:
             res = await self.db.execute(
-                select(Product.name)
-                .where(Product.name.ilike(f"{prefix}%"))
-                .where(Product.is_active == True)
-                .limit(5)
+                select(Product.name).where(Product.name.ilike(f"{prefix}%")).where(Product.is_active == True).limit(5)
             )
             names = list(res.scalars().all())
             return names

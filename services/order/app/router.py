@@ -3,6 +3,7 @@
 Exposes endpoints to trigger order checkouts and query order state.
 Uses transactional outbox — no direct Kafka dependency in the HTTP path.
 """
+
 import uuid
 
 import structlog
@@ -20,8 +21,7 @@ DEFAULT_USER_ID = "00000000-0000-0000-0000-000000000001"
 
 
 def get_order_service(
-    db: AsyncSession = Depends(get_db_session),
-    redis: Redis = Depends(get_redis_client)
+    db: AsyncSession = Depends(get_db_session), redis: Redis = Depends(get_redis_client)
 ) -> OrderService:
     """FastAPI Dependency Injection for OrderService."""
     return OrderService(db, redis)

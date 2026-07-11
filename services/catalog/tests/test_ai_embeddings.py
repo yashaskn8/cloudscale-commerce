@@ -18,6 +18,7 @@ from app.ai import (
 
 # ── Unit Tests: Tokenizer ───────────────────────────────────────────────────────
 
+
 class TestTokenizer:
     def test_removes_stop_words(self):
         tokens = _tokenize("this is a very good product for the office")
@@ -48,6 +49,7 @@ class TestTokenizer:
 
 # ── Unit Tests: Semantic Expansion ──────────────────────────────────────────────
 
+
 class TestSemanticExpansion:
     def test_expands_warm_to_winter_terms(self):
         tokens = ["warm", "jacket"]
@@ -77,16 +79,19 @@ class TestSemanticExpansion:
 
 # ── Unit Tests: Embedding Engine ────────────────────────────────────────────────
 
+
 class TestEmbeddingEngine:
     def setup_method(self):
         self.engine = EmbeddingEngine(dimension=64)
-        self.engine.fit_corpus([
-            "wireless bluetooth gaming headset with rgb lighting",
-            "ergonomic office chair with lumbar support",
-            "winter thermal insulated fleece jacket waterproof",
-            "beach summer lightweight breathable cotton shirt",
-            "mechanical keyboard cherry mx switches gaming",
-        ])
+        self.engine.fit_corpus(
+            [
+                "wireless bluetooth gaming headset with rgb lighting",
+                "ergonomic office chair with lumbar support",
+                "winter thermal insulated fleece jacket waterproof",
+                "beach summer lightweight breathable cotton shirt",
+                "mechanical keyboard cherry mx switches gaming",
+            ]
+        )
 
     def test_embedding_dimension(self):
         vec = self.engine.embed("gaming headset")
@@ -124,9 +129,9 @@ class TestEmbeddingEngine:
         sim_expanded = EmbeddingEngine.cosine_similarity(vec_query_expanded, vec_winter)
         sim_plain = EmbeddingEngine.cosine_similarity(vec_query_plain, vec_winter)
 
-        assert sim_expanded > sim_plain, (
-            f"Expanded query should match better: expanded={sim_expanded:.4f} vs plain={sim_plain:.4f}"
-        )
+        assert (
+            sim_expanded > sim_plain
+        ), f"Expanded query should match better: expanded={sim_expanded:.4f} vs plain={sim_plain:.4f}"
 
     def test_deterministic_embeddings(self):
         """Same input should always produce same embedding."""
@@ -136,6 +141,7 @@ class TestEmbeddingEngine:
 
 
 # ── Unit Tests: Vector Index ────────────────────────────────────────────────────
+
 
 class TestVectorIndex:
     def test_upsert_and_search(self):
@@ -171,6 +177,7 @@ class TestVectorIndex:
 
 
 # ── Integration Tests: Full Recommendation Pipeline ─────────────────────────────
+
 
 class TestRecommendationPipeline:
     """End-to-end test of the embedding → index → search pipeline."""

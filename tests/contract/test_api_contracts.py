@@ -5,6 +5,7 @@ These tests run against live (or staging) service endpoints to verify:
 2. HTTP status code correctness on standard endpoints.
 3. Response body schema structure matches expected contracts.
 """
+
 import os
 
 import httpx

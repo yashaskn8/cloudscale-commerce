@@ -10,6 +10,7 @@ Validates:
   6. Subscription status transitions on payment_failed events
   7. Replay attack protection (stale timestamps)
 """
+
 import hashlib
 import hmac
 import json
@@ -38,17 +39,13 @@ def _build_stripe_event(event_type: str, tenant_id: str = "tenant-webhook-test",
     event = {
         "id": "evt_test_123",
         "type": event_type,
-        "data": {
-            "object": {
-                "metadata": {"tenant_id": tenant_id},
-                **kwargs
-            }
-        }
+        "data": {"object": {"metadata": {"tenant_id": tenant_id}, **kwargs}},
     }
     return event
 
 
 # ── Unit Tests: Signature Verification ──────────────────────────────────────────
+
 
 class TestStripeSignatureVerification:
     def test_valid_signature_accepted(self):
@@ -85,6 +82,7 @@ class TestStripeSignatureVerification:
 
 # ── Integration Tests: Webhook Event Processing ────────────────────────────────
 
+
 class TestStripeWebhookEndpoint:
     @pytest.mark.asyncio
     async def test_rejects_unsigned_request(self):
@@ -92,7 +90,7 @@ class TestStripeWebhookEndpoint:
             response = await ac.post(
                 "/api/v1/billing/webhooks/stripe",
                 content=b'{"type": "test"}',
-                headers={"Content-Type": "application/json"}
+                headers={"Content-Type": "application/json"},
             )
             assert response.status_code == 400
             assert "signature" in response.json()["detail"].lower()
@@ -105,7 +103,7 @@ class TestStripeWebhookEndpoint:
             event = _build_stripe_event(
                 "customer.subscription.created",
                 tenant_id="tenant-webhook-test",
-                items={"data": [{"price": {"id": "price_growth_monthly"}}]}
+                items={"data": [{"price": {"id": "price_growth_monthly"}}]},
             )
             payload = json.dumps(event).encode()
             sig = _build_stripe_signature(payload, STRIPE_WEBHOOK_SECRET)
@@ -117,7 +115,7 @@ class TestStripeWebhookEndpoint:
                     headers={
                         "Content-Type": "application/json",
                         "Stripe-Signature": sig,
-                    }
+                    },
                 )
                 assert response.status_code == 200
                 data = response.json()
@@ -125,9 +123,7 @@ class TestStripeWebhookEndpoint:
                 assert data["event_type"] == "customer.subscription.created"
 
             # Verify subscription was created in DB
-            res = await db_session.execute(
-                select(Subscription).where(Subscription.tenant_id == "tenant-webhook-test")
-            )
+            res = await db_session.execute(select(Subscription).where(Subscription.tenant_id == "tenant-webhook-test"))
             sub = res.scalar_one_or_none()
             assert sub is not None
             assert sub.plan_tier == "growth"
@@ -144,7 +140,7 @@ class TestStripeWebhookEndpoint:
                 "invoice.payment_succeeded",
                 tenant_id="tenant-invoice-test",
                 amount_paid=4900,  # $49.00 in cents
-                currency="usd"
+                currency="usd",
             )
             payload = json.dumps(event).encode()
             sig = _build_stripe_signature(payload, STRIPE_WEBHOOK_SECRET)
@@ -156,14 +152,12 @@ class TestStripeWebhookEndpoint:
                     headers={
                         "Content-Type": "application/json",
                         "Stripe-Signature": sig,
-                    }
+                    },
                 )
                 assert response.status_code == 200
 
             # Verify invoice was recorded
-            res = await db_session.execute(
-                select(Invoice).where(Invoice.tenant_id == "tenant-invoice-test")
-            )
+            res = await db_session.execute(select(Invoice).where(Invoice.tenant_id == "tenant-invoice-test"))
             inv = res.scalar_one_or_none()
             assert inv is not None
             assert inv.amount == Decimal("49.00")
@@ -183,10 +177,7 @@ class TestStripeWebhookEndpoint:
             await db_session.commit()
 
             # Send payment_failed event
-            event = _build_stripe_event(
-                "invoice.payment_failed",
-                tenant_id="tenant-pastdue-test"
-            )
+            event = _build_stripe_event("invoice.payment_failed", tenant_id="tenant-pastdue-test")
             payload = json.dumps(event).encode()
             sig = _build_stripe_signature(payload, STRIPE_WEBHOOK_SECRET)
 
@@ -197,7 +188,7 @@ class TestStripeWebhookEndpoint:
                     headers={
                         "Content-Type": "application/json",
                         "Stripe-Signature": sig,
-                    }
+                    },
                 )
                 assert response.status_code == 200
 

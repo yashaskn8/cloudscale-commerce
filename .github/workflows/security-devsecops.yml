@@ -12,10 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
@@ -30,10 +30,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Set up Helm
-        uses: azure/setup-helm@v3
+        uses: azure/setup-helm@v5
         with:
           version: 'v3.12.0'
 
@@ -53,13 +53,13 @@ jobs:
         service: [auth, catalog, inventory, order, payment, notification]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Build Mock Image for Scanning
         run: docker build -t cloudscale/${{ matrix.service }}-service:test -f services/${{ matrix.service }}/Dockerfile .
 
       - name: Run Trivy Vulnerability Scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: 'cloudscale/${{ matrix.service }}-service:test'
           format: 'table'
@@ -74,10 +74,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Install Cosign
-        uses: sigstore/cosign-installer@main
+        uses: sigstore/cosign-installer@v4.1.2
 
       - name: Generate SPDX SBOM
         uses: anchore/sbom-action@v0
@@ -85,9 +85,11 @@ jobs:
           path: .
           format: spdx-json
           output-file: sbom.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
 
       - name: Upload SBOM Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v7
         with:
           name: sbom-artifact
           path: sbom.spdx.json

@@ -4,6 +4,7 @@ Handles stock reservation on OrderCreatedEvent and stock release on
 PaymentFailedEvent/OrderCancelledEvent. Uses inbox for exactly-once processing
 and transactional outbox for response events.
 """
+
 import asyncio
 import uuid
 from typing import Any
@@ -110,9 +111,7 @@ async def _handle_order_created(db, payload: dict[str, Any], correlation_id: str
             lock_key = f"inventory:lock:{product_uuid}"
 
             async with acquire_lock(redis_client, lock_key):
-                result = await db.execute(
-                    select(Inventory).where(Inventory.product_id == product_uuid)
-                )
+                result = await db.execute(select(Inventory).where(Inventory.product_id == product_uuid))
                 inventory = result.scalar_one_or_none()
 
                 if not inventory or inventory.available_stock < quantity:
@@ -137,9 +136,7 @@ async def _handle_order_created(db, payload: dict[str, Any], correlation_id: str
             for pid, qty in reserved_items:
                 lock_key = f"inventory:lock:{pid}"
                 async with acquire_lock(redis_client, lock_key):
-                    result = await db.execute(
-                        select(Inventory).where(Inventory.product_id == pid)
-                    )
+                    result = await db.execute(select(Inventory).where(Inventory.product_id == pid))
                     inv = result.scalar_one_or_none()
                     if inv:
                         inv.available_stock += qty
@@ -152,9 +149,7 @@ async def _handle_order_created(db, payload: dict[str, Any], correlation_id: str
                 correlation_id=correlation_id,
                 payload={"order_id": order_id, "reason": failure_reason},
             )
-            write_outbox(
-                db, OutboxMessage, settings.INVENTORY_EVENTS_TOPIC, fail_event, key=order_id
-            )
+            write_outbox(db, OutboxMessage, settings.INVENTORY_EVENTS_TOPIC, fail_event, key=order_id)
         else:
             # Write success event to outbox
             success_event = Event(
@@ -162,9 +157,7 @@ async def _handle_order_created(db, payload: dict[str, Any], correlation_id: str
                 correlation_id=correlation_id,
                 payload={"order_id": order_id, "items": items},
             )
-            write_outbox(
-                db, OutboxMessage, settings.INVENTORY_EVENTS_TOPIC, success_event, key=order_id
-            )
+            write_outbox(db, OutboxMessage, settings.INVENTORY_EVENTS_TOPIC, success_event, key=order_id)
             logger.info("Stock reserved successfully", order_id=order_id)
 
     finally:
@@ -187,9 +180,7 @@ async def _handle_release_stock(db, payload: dict[str, Any], correlation_id: str
             lock_key = f"inventory:lock:{product_uuid}"
 
             async with acquire_lock(redis_client, lock_key):
-                result = await db.execute(
-                    select(Inventory).where(Inventory.product_id == product_uuid)
-                )
+                result = await db.execute(select(Inventory).where(Inventory.product_id == product_uuid))
                 inventory = result.scalar_one_or_none()
 
                 if inventory:
@@ -205,9 +196,7 @@ async def _handle_release_stock(db, payload: dict[str, Any], correlation_id: str
             correlation_id=correlation_id,
             payload={"order_id": order_id},
         )
-        write_outbox(
-            db, OutboxMessage, settings.INVENTORY_EVENTS_TOPIC, release_event, key=order_id
-        )
+        write_outbox(db, OutboxMessage, settings.INVENTORY_EVENTS_TOPIC, release_event, key=order_id)
         logger.info("Stock released successfully", order_id=order_id)
 
     except Exception as e:

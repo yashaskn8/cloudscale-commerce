@@ -9,6 +9,7 @@ Provides:
 - Invalidation helper hooks
 - Prometheus metrics monitoring for hit/miss ratios
 """
+
 import asyncio
 import json
 import time
@@ -28,7 +29,7 @@ logger = structlog.get_logger()
 CACHE_REQUESTS = Counter(
     "caching_requests_total",
     "Total requests sent to the caching layer",
-    ["tier", "operation", "status"]  # tier: L1/L2, status: hit/miss
+    ["tier", "operation", "status"],  # tier: L1/L2, status: hit/miss
 )
 
 # Cache Key Versioning
@@ -95,9 +96,8 @@ def cache_aside(
     l1_ttl_seconds: int = 5,
 ) -> Callable[[Callable[..., Coroutine[Any, Any, Any]]], Callable[..., Coroutine[Any, Any, Any]]]:
     """Decorator applying multi-layer cache-aside lookup with stampede lock protection."""
-    def decorator(
-        func: Callable[..., Coroutine[Any, Any, Any]]
-    ) -> Callable[..., Coroutine[Any, Any, Any]]:
+
+    def decorator(func: Callable[..., Coroutine[Any, Any, Any]]) -> Callable[..., Coroutine[Any, Any, Any]]:
         @wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
             # Construct versioned cache key
@@ -159,14 +159,14 @@ def cache_aside(
                 l1_cache.set(cache_key, db_result, ttl=l1_ttl_seconds)
                 if redis_client:
                     try:
-                        await redis_client.setex(
-                            cache_key, ttl_seconds, json.dumps(db_result)
-                        )
+                        await redis_client.setex(cache_key, ttl_seconds, json.dumps(db_result))
                     except Exception as exc:
                         logger.error("Failed to write to L2 Redis cache", error=str(exc))
 
                 return db_result
+
         return wrapper
+
     return decorator
 
 
@@ -174,12 +174,14 @@ def cache_aside(
 # Invalidation Helpers
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 async def invalidate_cache_key(key_prefix: str, func_name: str, args_identity: str) -> None:
     """Evicts a specific cache key from both local and distributed cache levels."""
     cache_key = f"{CACHE_VERSION}:{key_prefix}:{func_name}:{args_identity}"
     l1_cache.delete(cache_key)
 
     from cloudscale_shared.database import redis_manager
+
     if redis_manager:
         try:
             redis_client = redis_manager.get_client()

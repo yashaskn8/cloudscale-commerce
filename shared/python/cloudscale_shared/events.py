@@ -3,6 +3,7 @@
 Provides the Event schema, KafkaProducerWrapper, and KafkaConsumerWrapper with
 built-in retry topic routing and Dead Letter Queue (DLQ) support.
 """
+
 import json
 import uuid
 from collections.abc import Awaitable, Callable
@@ -19,14 +20,13 @@ logger = structlog.get_logger()
 # Event Schema
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class Event(BaseModel):
     """Base schema for all domain events across the platform."""
 
     event_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     event_type: str
-    timestamp: str = Field(
-        default_factory=lambda: datetime.now(UTC).isoformat()
-    )
+    timestamp: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
     correlation_id: str
     payload: dict[str, Any]
     version: int = 1
@@ -36,6 +36,7 @@ class Event(BaseModel):
 # ──────────────────────────────────────────────────────────────────────────────
 # Kafka Producer
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 class KafkaProducerWrapper:
     """Publishes events to Kafka with standardized serialization and logging."""
@@ -59,14 +60,10 @@ class KafkaProducerWrapper:
         await self.producer.stop()
         logger.info("Kafka Producer stopped.")
 
-    async def send_event(
-        self, topic: str, event: Event, key: str | None = None
-    ) -> None:
+    async def send_event(self, topic: str, event: Event, key: str | None = None) -> None:
         """Sends an event to a Kafka topic, auto-injecting tracing context."""
         try:
-            structlog.contextvars.bind_contextvars(
-                correlation_id=event.correlation_id
-            )
+            structlog.contextvars.bind_contextvars(correlation_id=event.correlation_id)
             logger.info(
                 "Publishing event to Kafka",
                 topic=topic,
@@ -77,13 +74,12 @@ class KafkaProducerWrapper:
             value = event.model_dump()
             try:
                 from cloudscale_shared.tracing import inject_trace_into_event
+
                 value = inject_trace_into_event(value)
             except ImportError:
                 pass
 
-            await self.producer.send_and_wait(
-                topic, key=key, value=value
-            )
+            await self.producer.send_and_wait(topic, key=key, value=value)
         except Exception as e:
             logger.exception(
                 "Failed to publish event to Kafka",
@@ -97,6 +93,7 @@ class KafkaProducerWrapper:
 # ──────────────────────────────────────────────────────────────────────────────
 # Kafka Consumer with Retry + DLQ
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 class KafkaConsumerWrapper:
     """Consumes events from Kafka topics with built-in retry and DLQ routing.
@@ -135,9 +132,7 @@ class KafkaConsumerWrapper:
         # Lazy-init a dedicated producer for retry/DLQ publishing
         self._retry_producer = KafkaProducerWrapper(self.bootstrap_servers)
         await self._retry_producer.start()
-        logger.info(
-            "Kafka Consumer started.", topics=self.topics, group_id=self.group_id
-        )
+        logger.info("Kafka Consumer started.", topics=self.topics, group_id=self.group_id)
 
     async def stop(self) -> None:
         self.is_running = False
@@ -146,9 +141,7 @@ class KafkaConsumerWrapper:
             await self._retry_producer.stop()
         logger.info("Kafka Consumer stopped.")
 
-    async def consume_loop(
-        self, handler: Callable[[dict[str, Any]], Awaitable[None]]
-    ) -> None:
+    async def consume_loop(self, handler: Callable[[dict[str, Any]], Awaitable[None]]) -> None:
         """Runs the event loop, feeding messages into the handler with retry/DLQ."""
         try:
             async for msg in self.consumer:
@@ -175,6 +168,7 @@ class KafkaConsumerWrapper:
                     context = None
                     try:
                         from cloudscale_shared.tracing import extract_trace_from_event
+
                         context = extract_trace_from_event(event_data)
                     except ImportError:
                         pass
@@ -182,11 +176,10 @@ class KafkaConsumerWrapper:
                     # Execute handler inside active consumer span
                     try:
                         from opentelemetry import trace
+
                         tracer = trace.get_tracer("cloudscale-consumer")
                         with tracer.start_as_current_span(
-                            f"kafka.consume.{msg.topic}",
-                            context=context,
-                            kind=trace.SpanKind.CONSUMER
+                            f"kafka.consume.{msg.topic}", context=context, kind=trace.SpanKind.CONSUMER
                         ) as span:
                             span.set_attribute("messaging.system", "kafka")
                             span.set_attribute("messaging.destination", msg.topic)
@@ -209,9 +202,7 @@ class KafkaConsumerWrapper:
         finally:
             await self.stop()
 
-    async def _handle_failure(
-        self, msg: Any, event_data: dict[str, Any], exception: Exception
-    ) -> None:
+    async def _handle_failure(self, msg: Any, event_data: dict[str, Any], exception: Exception) -> None:
         """Routes failed messages to retry topic or DLQ based on retry count."""
         retry_count = event_data.get("retry_count", 0)
 
@@ -225,11 +216,11 @@ class KafkaConsumerWrapper:
                 attempt=retry_count + 1,
             )
             try:
-                retry_event = Event(**{
-                    k: v for k, v in event_data.items()
-                    if k in Event.model_fields
-                })
-                await self._retry_producer.send_event(
+                retry_event = Event(**{k: v for k, v in event_data.items() if k in Event.model_fields})
+                retry_producer = self._retry_producer
+                if retry_producer is None:
+                    raise RuntimeError("Retry producer is not initialized")
+                await retry_producer.send_event(
                     retry_topic, retry_event, key=msg.key.decode("utf-8") if msg.key else None
                 )
             except Exception as retry_exc:
@@ -238,9 +229,7 @@ class KafkaConsumerWrapper:
         else:
             await self._send_to_dlq(msg, event_data, exception)
 
-    async def _send_to_dlq(
-        self, msg: Any, event_data: dict[str, Any], exception: Exception
-    ) -> None:
+    async def _send_to_dlq(self, msg: Any, event_data: dict[str, Any], exception: Exception) -> None:
         """Route permanently failed message to Dead Letter Queue topic."""
         dlq_topic = f"{msg.topic}-dlq"
         logger.error(
@@ -262,10 +251,9 @@ class KafkaConsumerWrapper:
                 correlation_id=event_data.get("correlation_id", "unknown"),
                 payload=dlq_payload,
             )
-            await self._retry_producer.send_event(
-                dlq_topic, dlq_event, key=msg.key.decode("utf-8") if msg.key else None
-            )
+            retry_producer = self._retry_producer
+            if retry_producer is None:
+                raise RuntimeError("Retry producer is not initialized")
+            await retry_producer.send_event(dlq_topic, dlq_event, key=msg.key.decode("utf-8") if msg.key else None)
         except Exception as dlq_exc:
-            logger.error(
-                "CRITICAL: Failed to send to DLQ", error=str(dlq_exc)
-            )
+            logger.error("CRITICAL: Failed to send to DLQ", error=str(dlq_exc))

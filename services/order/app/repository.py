@@ -2,6 +2,7 @@
 
 Handles database querying and state persistence for Order aggregates.
 """
+
 import uuid
 
 from app.models import Order
@@ -19,11 +20,7 @@ class OrderRepository(SQLAlchemyRepository[Order]):
 
     async def get_by_idempotency_key(self, key: str) -> Order | None:
         """Retrieves an order by its unique idempotency key within tenant context."""
-        stmt = (
-            select(Order)
-            .where(Order.idempotency_key == key)
-            .where(Order.tenant_id == get_current_tenant())
-        )
+        stmt = select(Order).where(Order.idempotency_key == key).where(Order.tenant_id == get_current_tenant())
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -46,10 +43,6 @@ class OrderRepository(SQLAlchemyRepository[Order]):
 
     async def count_tenant_orders(self) -> int:
         """Counts all orders belonging to the current tenant."""
-        stmt = (
-            select(func.count())
-            .select_from(Order)
-            .where(Order.tenant_id == get_current_tenant())
-        )
+        stmt = select(func.count()).select_from(Order).where(Order.tenant_id == get_current_tenant())
         result = await self.session.execute(stmt)
-        return result.scalar_one()
+        return int(result.scalar_one())

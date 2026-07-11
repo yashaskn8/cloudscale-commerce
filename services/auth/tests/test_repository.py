@@ -10,11 +10,7 @@ async def test_user_repository_crud(db_session: AsyncSession):
 
     # 1. Add user
     new_user = User(
-        email="test@cloudscale.com",
-        password_hash="hashed_pwd",
-        first_name="Jane",
-        last_name="Doe",
-        role="shopper"
+        email="test@cloudscale.com", password_hash="hashed_pwd", first_name="Jane", last_name="Doe", role="shopper"
     )
     await repo.add(new_user)
     await db_session.flush()

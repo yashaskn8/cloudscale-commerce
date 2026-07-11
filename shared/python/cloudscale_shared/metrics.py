@@ -6,6 +6,7 @@ Provides:
 - Database & Redis connection pool gauges
 - Standardized liveness/readiness health probe endpoints
 """
+
 import time
 
 import structlog
@@ -41,32 +42,18 @@ REQUEST_ERRORS = Counter(
 # Custom Business Metrics
 # ──────────────────────────────────────────────────────────────────────────────
 
-ORDERS_CREATED = Counter(
-    "orders_created_total", "Total orders created", ["service"]
-)
-PAYMENTS_PROCESSED = Counter(
-    "payments_processed_total", "Total payments processed", ["service", "status"]
-)
-INVENTORY_RESERVATIONS = Counter(
-    "inventory_reservations_total", "Total inventory reservations", ["service", "status"]
-)
-NOTIFICATIONS_SENT = Counter(
-    "notifications_sent_total", "Total notifications sent", ["service"]
-)
+ORDERS_CREATED = Counter("orders_created_total", "Total orders created", ["service"])
+PAYMENTS_PROCESSED = Counter("payments_processed_total", "Total payments processed", ["service", "status"])
+INVENTORY_RESERVATIONS = Counter("inventory_reservations_total", "Total inventory reservations", ["service", "status"])
+NOTIFICATIONS_SENT = Counter("notifications_sent_total", "Total notifications sent", ["service"])
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Infrastructure Gauges
 # ──────────────────────────────────────────────────────────────────────────────
 
-DB_POOL_SIZE = Gauge(
-    "db_connection_pool_size", "Current DB connection pool size", ["service"]
-)
-DB_POOL_CHECKED_OUT = Gauge(
-    "db_connections_checked_out", "DB connections currently checked out", ["service"]
-)
-REDIS_CONNECTED = Gauge(
-    "redis_connected", "Whether Redis is connected (1=yes, 0=no)", ["service"]
-)
+DB_POOL_SIZE = Gauge("db_connection_pool_size", "Current DB connection pool size", ["service"])
+DB_POOL_CHECKED_OUT = Gauge("db_connections_checked_out", "DB connections currently checked out", ["service"])
+REDIS_CONNECTED = Gauge("redis_connected", "Whether Redis is connected (1=yes, 0=no)", ["service"])
 
 
 class PrometheusMiddleware(BaseHTTPMiddleware):
@@ -76,9 +63,7 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.service_name = service_name
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         method = request.method
         endpoint = request.url.path
         start_time = time.perf_counter()
@@ -142,9 +127,7 @@ async def check_db_health() -> dict:
         if db_manager is None:
             return {"postgres": "not_configured"}
         async with db_manager.session() as session:
-            await session.execute(
-                __import__("sqlalchemy").text("SELECT 1")
-            )
+            await session.execute(__import__("sqlalchemy").text("SELECT 1"))
         return {"postgres": "healthy"}
     except Exception as exc:
         return {"postgres": f"unhealthy: {exc}"}
@@ -172,9 +155,7 @@ async def check_kafka_health(bootstrap_servers: str) -> dict:
     try:
         host, port_str = bootstrap_servers.split(",")[0].split(":")
         port = int(port_str)
-        _, writer = await asyncio.wait_for(
-            asyncio.open_connection(host, port), timeout=3.0
-        )
+        _, writer = await asyncio.wait_for(asyncio.open_connection(host, port), timeout=3.0)
         writer.close()
         await writer.wait_closed()
         return {"kafka": "healthy"}
@@ -206,9 +187,7 @@ def register_health_routes(
             kafka_status = await check_kafka_health(kafka_bootstrap)
             checks.update(kafka_status)
 
-        all_healthy = all(
-            v == "healthy" or v == "not_configured" for v in checks.values()
-        )
+        all_healthy = all(v == "healthy" or v == "not_configured" for v in checks.values())
         status_code = 200 if all_healthy else 503
         return JSONResponse(
             content={"status": "ready" if all_healthy else "not_ready", "checks": checks},

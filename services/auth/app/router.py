@@ -8,6 +8,7 @@ Exposes endpoints for:
 - Current user profile retrieval
 - Admin user listing (RBAC-protected)
 """
+
 import structlog
 from app.models import User
 from app.schemas import RefreshRequest, TokenResponse, UserLogin, UserRegister, UserResponse
@@ -44,6 +45,7 @@ async def get_current_user(
 
 # ── Registration ──────────────────────────────────────────────────────────────
 
+
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register(
     payload: UserRegister,
@@ -55,6 +57,7 @@ async def register(
 
 
 # ── Login ─────────────────────────────────────────────────────────────────────
+
 
 @router.post(
     "/login",
@@ -74,6 +77,7 @@ async def login(
 
 # ── Token Refresh ─────────────────────────────────────────────────────────────
 
+
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh_tokens(
     payload: RefreshRequest,
@@ -84,6 +88,7 @@ async def refresh_tokens(
 
 
 # ── Logout ────────────────────────────────────────────────────────────────────
+
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(
@@ -96,6 +101,7 @@ async def logout(
 
 # ── Current User ──────────────────────────────────────────────────────────────
 
+
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: User = Depends(get_current_user)) -> UserResponse:
     """Retrieve the profile of the currently authenticated user."""
@@ -103,6 +109,7 @@ async def get_me(current_user: User = Depends(get_current_user)) -> UserResponse
 
 
 # ── Admin: User Listing (RBAC) ───────────────────────────────────────────────
+
 
 @router.get(
     "/users",

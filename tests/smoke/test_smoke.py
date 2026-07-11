@@ -6,6 +6,7 @@ These tests validate that core user journeys work end-to-end after deployment:
 3. Inventory stock check.
 4. Order placement.
 """
+
 import os
 
 import httpx

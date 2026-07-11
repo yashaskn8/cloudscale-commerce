@@ -11,20 +11,26 @@ from sqlalchemy.pool import StaticPool
 
 class MockRedisClient:
     """Mock Redis client to satisfy locking requirements during tests."""
+
     async def set(self, *args, **kwargs):
         return True
+
     async def eval(self, *args, **kwargs):
         return 1
+
     async def delete(self, *args, **kwargs):
         return 1
+
     async def scan(self, cursor, match=None):
         return 0, []
+
     async def aclose(self):
         pass
 
 
 class MockRedisManager:
     """Mock Redis manager providing MockRedisClient."""
+
     def get_client(self):
         return MockRedisClient()
 
@@ -51,10 +57,7 @@ async def configure_global_db_manager(test_session_manager):
 async def test_engine():
     """Create in-memory SQLite engine with StaticPool for test execution."""
     engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        poolclass=StaticPool,
-        connect_args={"check_same_thread": False},
-        echo=False
+        "sqlite+aiosqlite:///:memory:", poolclass=StaticPool, connect_args={"check_same_thread": False}, echo=False
     )
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -68,12 +71,8 @@ async def test_session_manager(test_engine) -> DatabaseSessionManager:
     manager = DatabaseSessionManager("sqlite+aiosqlite:///:memory:")
     manager._write_engine = test_engine
     manager._read_engine = test_engine
-    manager._write_sessionmaker = async_sessionmaker(
-        test_engine, class_=AsyncSession, expire_on_commit=False
-    )
-    manager._read_sessionmaker = async_sessionmaker(
-        test_engine, class_=AsyncSession, expire_on_commit=False
-    )
+    manager._write_sessionmaker = async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
+    manager._read_sessionmaker = async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
     return manager
 
 

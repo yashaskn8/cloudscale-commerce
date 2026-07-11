@@ -24,10 +24,7 @@ async def test_notification_delivery_and_deduplication(db_session: AsyncSession,
         "event_id": event_id,
         "event_type": "PaymentSuccessEvent",
         "correlation_id": correlation_id,
-        "payload": {
-            "order_id": str(order_id),
-            "transaction_id": "txn_notif_123"
-        }
+        "payload": {"order_id": str(order_id), "transaction_id": "txn_notif_123"},
     }
 
     # 1. First execution

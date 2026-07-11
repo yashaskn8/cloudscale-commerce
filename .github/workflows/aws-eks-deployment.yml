@@ -35,10 +35,10 @@ jobs:
     environment: staging # Protected by environment variables/secrets
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Configure AWS Credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-oidc-role
           aws-region: ${{ secrets.AWS_REGION }}
@@ -48,7 +48,7 @@ jobs:
           aws eks update-kubeconfig --name cloudscale-eks-staging --region ${{ secrets.AWS_REGION }}
 
       - name: Set up Helm
-        uses: azure/setup-helm@v3
+        uses: azure/setup-helm@v5
         with:
           version: 'v3.12.0'
 
@@ -70,10 +70,10 @@ jobs:
       name: production # Enforces environment approval rules in GitHub UI
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Configure AWS Credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-oidc-role
           aws-region: ${{ secrets.AWS_REGION }}
@@ -83,11 +83,11 @@ jobs:
           aws eks update-kubeconfig --name cloudscale-eks-prod --region ${{ secrets.AWS_REGION }}
 
       - name: Set up Helm
-        uses: azure/setup-helm@v3
+        uses: azure/setup-helm@v5
         with:
           version: 'v3.12.0'
 
-      # ── Canary Strategy Implementation ───────────────────────────────────────
+      # Canary Strategy Implementation
       - name: Deploy Canary (10% Traffic weight)
         if: github.event.inputs.deploy_strategy == 'canary'
         run: |
@@ -123,7 +123,7 @@ jobs:
           # Tear down canary slice
           helm uninstall cloudscale-canary --namespace cloudscale-prod || true
 
-      # ── Blue-Green Strategy Implementation ───────────────────────────────────
+      # Blue-Green Strategy Implementation
       - name: Deploy Green Slice
         if: github.event.inputs.deploy_strategy == 'blue-green'
         run: |
@@ -143,7 +143,7 @@ jobs:
           kubectl patch ingress cloudscale-ingress -n cloudscale-prod \
             --type=json -p='[{"op": "replace", "path": "/spec/rules/0/http/paths/0/backend/service/name", "value": "cloudscale-green-service"}]'
 
-      # ── Automated Rollback on Failure ────────────────────────────────────────
+      # Automated Rollback on Failure
       - name: Automated Rollback on Deployment Failure
         if: failure()
         run: |

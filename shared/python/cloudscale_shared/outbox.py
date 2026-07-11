@@ -11,10 +11,12 @@ Usage in a service's models.py:
     class OutboxMessage(Base, OutboxMixin):
         __tablename__ = "outbox_messages"
 """
+
 import asyncio
 import json
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
 import structlog
 from sqlalchemy import Boolean, DateTime, Integer, String, Text, select
@@ -30,27 +32,21 @@ logger = structlog.get_logger()
 class OutboxMixin:
     """Mixin providing outbox message columns. Inherit alongside your Base."""
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    event_id: Mapped[str] = mapped_column(
-        String(36), unique=True, nullable=False, index=True
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    event_id: Mapped[str] = mapped_column(String(36), unique=True, nullable=False, index=True)
     event_type: Mapped[str] = mapped_column(String(255), nullable=False)
     topic: Mapped[str] = mapped_column(String(255), nullable=False)
     key: Mapped[str | None] = mapped_column(String(255), nullable=True)
     payload: Mapped[str] = mapped_column(Text, nullable=False)
     correlation_id: Mapped[str] = mapped_column(String(36), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(UTC), nullable=False
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
     processed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     retry_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
 
 def write_outbox(
     session: AsyncSession,
-    outbox_model: type,
+    outbox_model: Any,
     topic: str,
     event: Event,
     key: str | None = None,
@@ -92,14 +88,14 @@ class OutboxWorker:
     def __init__(
         self,
         sessionmaker: async_sessionmaker[AsyncSession],
-        outbox_model: type,
+        outbox_model: Any,
         producer: KafkaProducerWrapper,
         poll_interval_seconds: float = 1.0,
         batch_size: int = 50,
         max_retries: int = 5,
     ):
         self.sessionmaker = sessionmaker
-        self.outbox_model = outbox_model
+        self.outbox_model: type[OutboxMixin] = outbox_model
         self.producer = producer
         self.poll_interval = poll_interval_seconds
         self.batch_size = batch_size
@@ -145,9 +141,7 @@ class OutboxWorker:
                 try:
                     event_data = json.loads(record.payload)
                     event = Event(**event_data)
-                    await self.producer.send_event(
-                        record.topic, event, key=record.key
-                    )
+                    await self.producer.send_event(record.topic, event, key=record.key)
                     record.processed = True
                     logger.info(
                         "Outbox message published",

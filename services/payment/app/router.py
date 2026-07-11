@@ -13,13 +13,12 @@ import time
 from decimal import Decimal
 
 import structlog
+from app.config import settings
 from app.models import Invoice, Subscription
 from cloudscale_shared import get_current_tenant, get_db_session
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.config import settings
 
 logger = structlog.get_logger()
 

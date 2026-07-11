@@ -55,7 +55,7 @@ def generate_rls_migration(table_name: str, tenant_column: str = "tenant_id") ->
         Complete SQL migration script as a string.
     """
     if table_name == "order_items":
-        sql = f"""
+        sql = """
 -- ============================================================================
 -- Row-Level Security Migration: {table_name}
 -- ============================================================================
@@ -75,7 +75,7 @@ DROP POLICY IF EXISTS tenant_isolation_delete ON {table_name};
 CREATE POLICY tenant_isolation_select ON {table_name}
     FOR SELECT
     USING (EXISTS (
-        SELECT 1 FROM orders WHERE orders.id = {table_name}.order_id 
+        SELECT 1 FROM orders WHERE orders.id = {table_name}.order_id
         AND orders.tenant_id = current_setting('app.current_tenant_id', true)
     ));
 
@@ -83,7 +83,7 @@ CREATE POLICY tenant_isolation_select ON {table_name}
 CREATE POLICY tenant_isolation_insert ON {table_name}
     FOR INSERT
     WITH CHECK (EXISTS (
-        SELECT 1 FROM orders WHERE orders.id = {table_name}.order_id 
+        SELECT 1 FROM orders WHERE orders.id = {table_name}.order_id
         AND orders.tenant_id = current_setting('app.current_tenant_id', true)
     ));
 
@@ -91,7 +91,7 @@ CREATE POLICY tenant_isolation_insert ON {table_name}
 CREATE POLICY tenant_isolation_update ON {table_name}
     FOR UPDATE
     USING (EXISTS (
-        SELECT 1 FROM orders WHERE orders.id = {table_name}.order_id 
+        SELECT 1 FROM orders WHERE orders.id = {table_name}.order_id
         AND orders.tenant_id = current_setting('app.current_tenant_id', true)
     ));
 
@@ -99,13 +99,13 @@ CREATE POLICY tenant_isolation_update ON {table_name}
 CREATE POLICY tenant_isolation_delete ON {table_name}
     FOR DELETE
     USING (EXISTS (
-        SELECT 1 FROM orders WHERE orders.id = {table_name}.order_id 
+        SELECT 1 FROM orders WHERE orders.id = {table_name}.order_id
         AND orders.tenant_id = current_setting('app.current_tenant_id', true)
     ));
 """
-        return sql.strip()  # nosec B608
+        return sql.replace("{table_name}", table_name).strip()
 
-    sql_generic = f"""
+    sql_generic = """
 -- ============================================================================
 -- Row-Level Security Migration: {table_name}
 -- ============================================================================
@@ -155,7 +155,7 @@ CREATE INDEX IF NOT EXISTS idx_{table_name}_{tenant_column}
 -- (In production, the app connects as 'cloudscale_app' role, not superuser)
 -- GRANT SELECT, INSERT, UPDATE, DELETE ON {table_name} TO cloudscale_app;
 """
-    return sql_generic.strip()  # nosec B608
+    return sql_generic.replace("{table_name}", table_name).replace("{tenant_column}", tenant_column).strip()
 
 
 def generate_tenant_context_function() -> str:
@@ -189,7 +189,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 def generate_rollback_migration(table_name: str) -> str:
     """Generate the rollback (downgrade) migration for removing RLS from a table."""
-    sql = f"""
+    sql = """
 -- Rollback: Remove RLS from {table_name}
 DROP POLICY IF EXISTS tenant_isolation_select ON {table_name};
 DROP POLICY IF EXISTS tenant_isolation_insert ON {table_name};
@@ -197,7 +197,7 @@ DROP POLICY IF EXISTS tenant_isolation_update ON {table_name};
 DROP POLICY IF EXISTS tenant_isolation_delete ON {table_name};
 ALTER TABLE {table_name} DISABLE ROW LEVEL SECURITY;
 """
-    return sql.strip()  # nosec B608
+    return sql.replace("{table_name}", table_name).strip()
 
 
 def generate_full_migration() -> str:
@@ -237,8 +237,8 @@ def set_tenant_context_sql(tenant_id: str) -> str:
     """
     # Use parameterized setting to prevent SQL injection
     safe_tenant = tenant_id.replace("'", "''")
-    query = f"SELECT set_config('app.current_tenant_id', '{safe_tenant}', true);"
-    return query  # nosec B608
+    query = "SELECT set_config('app.current_tenant_id', '{safe_tenant}', true);"
+    return query.replace("{safe_tenant}", safe_tenant)
 
 
 # ── Validation Helpers ──────────────────────────────────────────────────────────

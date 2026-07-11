@@ -55,6 +55,7 @@ async def configure_global_db_manager(test_session_manager):
 
 import os
 
+
 @pytest.fixture
 async def test_engine():
     """Create engine for testing. Fallback to SQLite in-memory if no DATABASE_URL is set."""
@@ -66,16 +67,16 @@ async def test_engine():
         engine = create_async_engine(
             "sqlite+aiosqlite:///:memory:", poolclass=StaticPool, connect_args={"check_same_thread": False}, echo=False
         )
-        
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield engine
-    
+
     # Drop tables for clean state in subsequent runs on persistent DBs
     if engine.url.drivername.startswith("postgresql"):
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.drop_all)
-            
+
     await engine.dispose()
 
 
@@ -85,7 +86,7 @@ async def test_session_manager(test_engine) -> DatabaseSessionManager:
     db_url = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
     if db_url.startswith("postgresql://"):
         db_url = db_url.replace("postgresql://", "postgresql+asyncpg://")
-        
+
     manager = DatabaseSessionManager(db_url)
     manager._write_engine = test_engine
     manager._read_engine = test_engine

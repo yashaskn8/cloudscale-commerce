@@ -52,7 +52,7 @@ class CatalogService:
         if self.redis:
             # Resolve active subscription limits from Redis plan context
             plan_raw = await self.redis.get(f"tenant:plan:{tenant_id}")
-            plan_tier = plan_raw if plan_raw else "free"
+            plan_tier = plan_raw.decode() if isinstance(plan_raw, bytes) else (plan_raw or "free")
 
         limits = {"free": 10, "growth": 100, "enterprise": 10000}
         max_limit = limits.get(plan_tier, 10)

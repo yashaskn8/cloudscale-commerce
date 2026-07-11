@@ -43,8 +43,8 @@ class OrderService:
         if self.redis:
             # Resolve active subscription limits from Redis plan context
             plan_raw = await self.redis.get(f"tenant:plan:{tenant_id}")
-            plan_tier = plan_raw if plan_raw else "free"
-            limits = {"free": 15, "growth": 200, "enterprise": 20000}
+            plan_tier = plan_raw.decode() if isinstance(plan_raw, bytes) else (plan_raw or "free")
+            limits: dict[str, int] = {"free": 15, "growth": 200, "enterprise": 20000}
             max_limit = limits.get(plan_tier, 15)
 
             current_count = await self.repo.count_tenant_orders()

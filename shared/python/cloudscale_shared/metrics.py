@@ -197,6 +197,6 @@ def register_health_routes(
 
 def setup_metrics(app: FastAPI, service_name: str) -> None:
     """Configures Prometheus ASGI metrics page and tracks HTTP requests."""
-    app.add_middleware(PrometheusMiddleware, service_name=service_name)
+    app.add_middleware(PrometheusMiddleware, service_name=service_name)  # type: ignore[arg-type]
     metrics_app = make_asgi_app()
     app.mount("/metrics", metrics_app)

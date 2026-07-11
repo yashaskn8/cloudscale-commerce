@@ -30,9 +30,6 @@ jobs:
     - name: Run Black Formatter Check
       run: black --check . --exclude '/(shared/python/cloudscale_shared/grpc|.*/alembic)/'
 
-    - name: Run MyPy Type Check
-      run: mypy .
-
     - name: Install Shared Package & Service Dependencies
       run: |
         pip install -e shared/python
@@ -41,6 +38,9 @@ jobs:
             pip install -r services/$service/requirements.txt
           fi
         done
+
+    - name: Run MyPy Type Check
+      run: mypy .
 
     - name: Run Verification Compilations
       run: |

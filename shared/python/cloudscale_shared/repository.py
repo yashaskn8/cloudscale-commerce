@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, TypeVar, cast
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -44,12 +44,12 @@ class SQLAlchemyRepository(AbstractRepository[T]):
         return entity
 
     async def get_by_id(self, entity_id: Any) -> T | None:
-        return await self.session.get(self.model_class, entity_id)
+        return cast(T | None, await self.session.get(self.model_class, entity_id))
 
     async def list(self) -> Sequence[T]:
         stmt = select(self.model_class)
         result = await self.session.execute(stmt)
-        return result.scalars().all()
+        return cast(Sequence[T], result.scalars().all())
 
     async def remove(self, entity: T) -> None:
         await self.session.delete(entity)

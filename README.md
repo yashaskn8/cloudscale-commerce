@@ -1,7 +1,7 @@
 # CloudScale Commerce
 
 <p align="center">
-  <img src="docs/architecture/banner.png" alt="CloudScale Commerce Banner" width="800">
+  <img src="docs/architecture/workflow_diagram.png" alt="CloudScale Commerce Workflow" width="800">
 </p>
 
 [![CI/CD Validation](https://github.com/yashaskn8/cloudscale-commerce/actions/workflows/pr-validation.yml/badge.svg)](file:///.github/workflows/pr-validation.yml)

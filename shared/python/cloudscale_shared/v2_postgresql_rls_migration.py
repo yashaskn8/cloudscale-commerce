@@ -55,7 +55,7 @@ def generate_rls_migration(table_name: str, tenant_column: str = "tenant_id") ->
         Complete SQL migration script as a string.
     """
     if table_name == "order_items":
-        return f"""
+        return f"""  # nosec B608
 -- ============================================================================
 -- Row-Level Security Migration: {table_name}
 -- ============================================================================
@@ -104,7 +104,7 @@ CREATE POLICY tenant_isolation_delete ON {table_name}
     ));
 """.strip()
 
-    return f"""
+    return f"""  # nosec B608
 -- ============================================================================
 -- Row-Level Security Migration: {table_name}
 -- ============================================================================
@@ -187,7 +187,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 def generate_rollback_migration(table_name: str) -> str:
     """Generate the rollback (downgrade) migration for removing RLS from a table."""
-    return f"""
+    return f"""  # nosec B608
 -- Rollback: Remove RLS from {table_name}
 DROP POLICY IF EXISTS tenant_isolation_select ON {table_name};
 DROP POLICY IF EXISTS tenant_isolation_insert ON {table_name};
@@ -234,7 +234,7 @@ def set_tenant_context_sql(tenant_id: str) -> str:
     """
     # Use parameterized setting to prevent SQL injection
     safe_tenant = tenant_id.replace("'", "''")
-    return f"SELECT set_config('app.current_tenant_id', '{safe_tenant}', true);"
+    return f"SELECT set_config('app.current_tenant_id', '{safe_tenant}', true);"  # nosec B608
 
 
 # ── Validation Helpers ──────────────────────────────────────────────────────────

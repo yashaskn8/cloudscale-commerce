@@ -1,5 +1,9 @@
 # CloudScale Commerce
 
+<p align="center">
+  <img src="docs/architecture/banner.png" alt="CloudScale Commerce Banner" width="800">
+</p>
+
 [![CI/CD Validation](https://github.com/yashaskn8/cloudscale-commerce/actions/workflows/pr-validation.yml/badge.svg)](file:///.github/workflows/pr-validation.yml)
 [![Security Scan](https://github.com/yashaskn8/cloudscale-commerce/actions/workflows/security-devsecops.yml/badge.svg)](file:///.github/workflows/security-devsecops.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](file:///LICENSE)

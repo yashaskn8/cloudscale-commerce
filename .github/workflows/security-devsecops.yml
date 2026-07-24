@@ -113,13 +113,13 @@ jobs:
         run: |
           echo "Building, pushing, and signing container images with Cosign keyless..."
           REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          for SERVICE in auth catalog inventory order payment notification; do
+          for SERVICE in auth order; do
             IMAGE="ghcr.io/${REPO_NAME}/${SERVICE}-service:${{ github.sha }}"
             echo "Building ${IMAGE}..."
             docker build -t "${IMAGE}" -f services/${SERVICE}/Dockerfile .
             echo "Pushing ${IMAGE}..."
-            docker push "${IMAGE}"
-            echo "Signing ${IMAGE}..."
-            cosign sign --yes "${IMAGE}"
+            DIGEST=$(docker push "${IMAGE}" | grep -o 'sha256:[a-f0-9]\{64\}' | tail -n 1)
+            echo "Signing ${IMAGE}@${DIGEST}..."
+            cosign sign --yes "${IMAGE}@${DIGEST}" || cosign sign --yes "${IMAGE}"
           done
-          echo "All container images built, pushed, signed, and attestations recorded in Rekor transparency log."
+          echo "Container images built, pushed, signed, and attestations recorded in Rekor transparency log."

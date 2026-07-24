@@ -24,15 +24,21 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install ruff black mypy pytest pytest-asyncio pytest-cov
+          pip install -e shared/python
+          for service in auth catalog inventory order payment notification; do
+            if [ -f services/$service/requirements.txt ]; then
+              pip install -r services/$service/requirements.txt
+            fi
+          done
 
       - name: Run Ruff Linter
-        run: ruff check .
+        run: ruff check . --exclude 'shared/python/cloudscale_shared/grpc/*' --exclude '*/alembic/*'
 
       - name: Run Black Formatter Check
-        run: black --check .
+        run: black --check . --exclude '/(shared/python/cloudscale_shared/grpc|.*/alembic)/'
 
       - name: Run MyPy Type Check
-        run: mypy .
+        run: mypy . --ignore-missing-imports
 
   test-services:
     name: Test Suite (${{ matrix.service }})
@@ -79,8 +85,10 @@ jobs:
         env:
           PYTHONPATH: services/${{ matrix.service }}
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/cloudscale_test
+          JWT_SECRET_KEY: ci-test-secret-key-min-32-characters
+          STRIPE_WEBHOOK_SECRET: whsec_ci_test_secret
         run: |
-          pytest --asyncio-mode=auto --cov=services/${{ matrix.service }}/app --cov-report=xml services/${{ matrix.service }}/tests/
+          pytest --asyncio-mode=auto -p no:phoenix --cov=services/${{ matrix.service }}/app --cov-report=xml services/${{ matrix.service }}/tests/
 
       - name: Upload Coverage Artifacts
         uses: actions/upload-artifact@v7

@@ -1,5 +1,5 @@
 import os
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -65,14 +65,14 @@ class DatabaseSessionManager:
 
     async def close(self) -> None:
         """Disposes write and read database pools."""
-        if self._write_engine:
+        if self._write_engine is not None:
             await self._write_engine.dispose()
-        if self._read_engine:
+        if self._read_engine is not None:
             await self._read_engine.dispose()
         logger.info("Database engines successfully disposed.")
 
     @asynccontextmanager
-    async def write_session(self, tenant_id: str | None = None) -> AsyncIterator[AsyncSession]:
+    async def write_session(self, tenant_id: str | None = None) -> AsyncGenerator[AsyncSession]:
         """Provides transaction block on primary writable database instance.
 
         If tenant_id is provided and the engine is PostgreSQL, sets the session variable
@@ -96,7 +96,7 @@ class DatabaseSessionManager:
             DB_CONNECTIONS_ACTIVE.labels(service=self.service_name, type="write").dec()
 
     @asynccontextmanager
-    async def read_session(self, tenant_id: str | None = None) -> AsyncIterator[AsyncSession]:
+    async def read_session(self, tenant_id: str | None = None) -> AsyncGenerator[AsyncSession]:
         """Provides query-only block routing queries to the read replica.
 
         If tenant_id is provided and the engine is PostgreSQL, sets the session variable
@@ -116,7 +116,7 @@ class DatabaseSessionManager:
             DB_CONNECTIONS_ACTIVE.labels(service=self.service_name, type="read").dec()
 
     @asynccontextmanager
-    async def session(self) -> AsyncIterator[AsyncSession]:
+    async def session(self) -> AsyncGenerator[AsyncSession]:
         """Backward compatibility helper routing to primary write sessions."""
         async with self.write_session() as session:
             yield session
@@ -164,7 +164,7 @@ def init_redis(redis_url: str) -> None:
     redis_manager = RedisManager(redis_url)
 
 
-async def get_db_session() -> AsyncIterator[AsyncSession]:
+async def get_db_session() -> AsyncGenerator[AsyncSession]:
     """Dependency helper providing primary database session with RLS tenant context."""
     if db_manager is None:
         raise RuntimeError("Database session manager is not initialized.")
@@ -176,7 +176,7 @@ async def get_db_session() -> AsyncIterator[AsyncSession]:
         yield session
 
 
-async def get_read_db_session() -> AsyncIterator[AsyncSession]:
+async def get_read_db_session() -> AsyncGenerator[AsyncSession]:
     """Dependency helper providing query-only replica session with RLS tenant context."""
     if db_manager is None:
         raise RuntimeError("Database session manager is not initialized.")
@@ -187,7 +187,7 @@ async def get_read_db_session() -> AsyncIterator[AsyncSession]:
         yield session
 
 
-async def get_redis_client() -> AsyncIterator[Redis]:
+async def get_redis_client() -> AsyncGenerator[Redis]:
     """Dependency helper to get an async Redis client."""
     if redis_manager is None:
         raise RuntimeError("Redis manager is not initialized.")

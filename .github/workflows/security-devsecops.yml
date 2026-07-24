@@ -72,12 +72,24 @@ jobs:
     name: SBOM & Container Signing Provisioning
     needs: [sast-scan, container-scan]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@v4.1.2
+
+      - name: Log in to GHCR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate SPDX SBOM
         uses: anchore/sbom-action@v0
@@ -94,15 +106,20 @@ jobs:
           name: sbom-artifact
           path: sbom.spdx.json
 
-      - name: Sign Container Images (Keyless via Sigstore OIDC)
+      - name: Build, Push & Sign Container Images (Keyless via Sigstore OIDC)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           COSIGN_EXPERIMENTAL: "1"
         run: |
-          echo "Signing container images with Cosign keyless (Fulcio/Rekor)..."
+          echo "Building, pushing, and signing container images with Cosign keyless..."
+          REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           for SERVICE in auth catalog inventory order payment notification; do
-            IMAGE="ghcr.io/${{ github.repository }}/${SERVICE}-service:${{ github.sha }}"
+            IMAGE="ghcr.io/${REPO_NAME}/${SERVICE}-service:${{ github.sha }}"
+            echo "Building ${IMAGE}..."
+            docker build -t "${IMAGE}" -f services/${SERVICE}/Dockerfile .
+            echo "Pushing ${IMAGE}..."
+            docker push "${IMAGE}"
             echo "Signing ${IMAGE}..."
             cosign sign --yes "${IMAGE}"
           done
-          echo "All container images signed and attestations recorded in Rekor transparency log."
+          echo "All container images built, pushed, signed, and attestations recorded in Rekor transparency log."

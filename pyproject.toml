@@ -1,0 +1,75 @@
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+exclude = [
+    "**/alembic/**",
+    ".venv",
+    "venv",
+    "node_modules",
+    "frontend",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # Pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "S",   # bandit (flake8-bandit)
+    "B",   # flake8-bugbear
+    "A",   # flake8-builtins
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "S101",  # Use of assert detected (OK in tests)
+    "S104",  # Possible binding to all interfaces
+    "S106",  # Possible hardcoded password
+    "N818",  # Exception name should be named with an Error suffix
+    "B904",  # Within an except clause, raise exceptions with raise ... from
+    "UP046", # Generic class uses Generic subclass instead of type parameters
+    "S110",  # try-except-pass detected
+    "SIM103",# Return the condition directly
+    "SIM108",# Use ternary operator instead of if-else
+    "E501",  # Line too long
+    "E712",  # Avoid equality comparisons to False (needed for SQLAlchemy binary expressions)
+    "B008",  # Do not perform function call Depends in argument defaults (standard in FastAPI)
+    "S105",  # Possible hardcoded password (for webhook mocks)
+    "F401",  # Imported but unused (standard in __init__.py modules)
+    "E402",  # Module level import not at top of file (used to prevent circular imports)
+    "B007",  # Loop control variable not used (common in tests/simulations)
+    "B905",  # zip() without an explicit strict= parameter
+    "UP042", # Class inherits from both str and enum.Enum
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S101", "S106"]
+
+[tool.black]
+target-version = ["py312"]
+line-length = 120
+exclude = '''
+/(shared/python/cloudscale_shared/grpc|.*/alembic|.venv|venv|node_modules|frontend)/
+'''
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+explicit_package_bases = true
+exclude = [
+    "venv",
+    ".venv",
+    "__pycache__",
+    "alembic",
+    "migrations",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["services/*/tests"]
+asyncio_mode = "auto"
+addopts = "-v --tb=short"

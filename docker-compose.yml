@@ -1,0 +1,288 @@
+version: '3.8'
+
+services:
+  # Relational Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: cloudscale-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./deployments/docker/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # In-memory Caching, Session store, and Distributed Locks
+  redis:
+    image: redis:7-alpine
+    container_name: cloudscale-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Apache Kafka Event Broker (KRaft Mode - No Zookeeper)
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: cloudscale-kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093'
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:29093,PLAINTEXT_HOST://0.0.0.0:9092'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 29092 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Identity & Authentication Service
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth/Dockerfile
+    container_name: cloudscale-auth-service
+    ports:
+      - "8001:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://cloudscale_app:cloudscale_app_pass@postgres:5432/auth_db
+      - REDIS_URL=redis://redis:6379/0
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # Catalog Management Service
+  catalog-service:
+    build:
+      context: .
+      dockerfile: services/catalog/Dockerfile
+    container_name: cloudscale-catalog-service
+    ports:
+      - "8002:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://cloudscale_app:cloudscale_app_pass@postgres:5432/catalog_db
+      - REDIS_URL=redis://redis:6379/1
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # Inventory stock control microservice
+  inventory-service:
+    build:
+      context: .
+      dockerfile: services/inventory/Dockerfile
+    container_name: cloudscale-inventory-service
+    ports:
+      - "8003:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://cloudscale_app:cloudscale_app_pass@postgres:5432/inventory_db
+      - REDIS_URL=redis://redis:6379/2
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  # Ordering transaction/Saga coordinator
+  order-service:
+    build:
+      context: .
+      dockerfile: services/order/Dockerfile
+    container_name: cloudscale-order-service
+    ports:
+      - "8004:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://cloudscale_app:cloudscale_app_pass@postgres:5432/order_db
+      - REDIS_URL=redis://redis:6379/3
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  # Event-driven Payment Processor
+  payment-service:
+    build:
+      context: .
+      dockerfile: services/payment/Dockerfile
+    container_name: cloudscale-payment-service
+    ports:
+      - "8005:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://cloudscale_app:cloudscale_app_pass@postgres:5432/payment_db
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  # Event-driven Customer Notification sender
+  notification-service:
+    build:
+      context: .
+      dockerfile: services/notification/Dockerfile
+    container_name: cloudscale-notification-service
+    ports:
+      - "8006:8000"
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///notification_inbox.db
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  # API Gateway (Kong)
+  kong:
+    image: kong:3.4
+    container_name: cloudscale-kong
+    volumes:
+      - ./deployments/docker/kong.yml:/usr/local/kong/declarative/kong.yml
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /usr/local/kong/declarative/kong.yml
+      KONG_PROXY_LISTEN: 0.0.0.0:8000
+      KONG_LOG_LEVEL: notice
+    ports:
+      - "8000:8000"
+    depends_on:
+      - auth-service
+      - catalog-service
+      - inventory-service
+      - order-service
+
+  # ──────────────────────────────────────────────────────────────────────────────
+  # Observability & Monitoring Infrastructure (SRE Stack)
+  # ──────────────────────────────────────────────────────────────────────────────
+
+  # Prometheus Server
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: cloudscale-prometheus
+    volumes:
+      - ./deployments/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./deployments/prometheus/alert.rules:/etc/prometheus/alert.rules
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"
+    depends_on:
+      - auth-service
+      - catalog-service
+      - inventory-service
+      - order-service
+
+  # Alertmanager
+  alertmanager:
+    image: prom/alertmanager:v0.25.0
+    container_name: cloudscale-alertmanager
+    volumes:
+      - ./deployments/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    ports:
+      - "9093:9093"
+
+  # Jaeger (Distributed Tracing UI & Collector Backend)
+  jaeger:
+    image: jaegertracing/all-in-one:1.47
+    container_name: cloudscale-jaeger
+    ports:
+      - "16686:16686" # UI port
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+
+  # OpenTelemetry Collector
+  otel-collector:
+    image: otel/opentelemetry-collector:0.81.0
+    container_name: cloudscale-otel-collector
+    volumes:
+      - ./deployments/otel-collector/otel-collector-config.yml:/etc/otel-collector/config.yaml
+    command: ["--config=/etc/otel-collector/config.yaml"]
+    ports:
+      - "4320:4317" # Exposed gRPC port (forwarded internally to Jaeger)
+    depends_on:
+      - jaeger
+
+  # Loki (Centralized Log Store)
+  loki:
+    image: grafana/loki:2.8.2
+    container_name: cloudscale-loki
+    volumes:
+      - ./deployments/loki/loki-config.yml:/etc/loki/local-config.yaml
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+
+  # Promtail (Log Shipper)
+  promtail:
+    image: grafana/promtail:2.8.2
+    container_name: cloudscale-promtail
+    volumes:
+      - ./deployments/promtail/promtail-config.yml:/etc/promtail/config.yml
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: -config.file=/etc/promtail/config.yml
+
+  # Grafana Dashboard UI
+  grafana:
+    image: grafana/grafana:9.5.2
+    container_name: cloudscale-grafana
+    volumes:
+      - ./deployments/grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./deployments/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./deployments/grafana/dashboards/microservices_dashboard.json:/etc/grafana/dashboards/microservices_dashboard.json
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - loki
+
+volumes:
+  postgres_data:
+  redis_data:

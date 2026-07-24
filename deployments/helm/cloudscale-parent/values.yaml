@@ -1,0 +1,191 @@
+global:
+  namespace: cloudscale
+  imageRegistry: ""
+  imagePullPolicy: IfNotPresent
+
+  postgres:
+    host: postgres
+    port: 5432
+    user: postgres
+    password: postgres
+
+  redis:
+    host: redis
+    port: 6379
+
+  kafka:
+    bootstrapServers: kafka:29092
+
+  otel:
+    endpoint: http://otel-collector:4317
+
+  jwt:
+    secretKey: ""  # REQUIRED: Supply via --set global.jwt.secretKey or ExternalSecret
+    algorithm: HS256
+
+# ── Sub-chart toggles ──────────────────────────────────────────────────────────
+auth-service:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: cloudscale/auth-service
+    tag: "1.0.0"
+  service:
+    port: 8000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilization: 70
+    targetMemoryUtilization: 80
+  serviceAccount:
+    create: true
+    name: ""
+  database:
+    name: auth_db
+    redisDb: "0"
+
+catalog-service:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: cloudscale/catalog-service
+    tag: "1.0.0"
+  service:
+    port: 8000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilization: 70
+    targetMemoryUtilization: 80
+  serviceAccount:
+    create: true
+    name: ""
+  database:
+    name: catalog_db
+    redisDb: "1"
+
+inventory-service:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: cloudscale/inventory-service
+    tag: "1.0.0"
+  service:
+    port: 8000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilization: 70
+    targetMemoryUtilization: 80
+  serviceAccount:
+    create: true
+    name: ""
+  database:
+    name: inventory_db
+    redisDb: "2"
+
+order-service:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: cloudscale/order-service
+    tag: "1.0.0"
+  service:
+    port: 8000
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 12
+    targetCPUUtilization: 70
+    targetMemoryUtilization: 80
+  serviceAccount:
+    create: true
+    name: ""
+  database:
+    name: order_db
+    redisDb: "3"
+
+payment-service:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: cloudscale/payment-service
+    tag: "1.0.0"
+  service:
+    port: 8000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilization: 70
+    targetMemoryUtilization: 80
+  serviceAccount:
+    create: true
+    name: ""
+  database:
+    name: payment_db
+
+notification-service:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: cloudscale/notification-service
+    tag: "1.0.0"
+  service:
+    port: 8000
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 4
+    targetCPUUtilization: 80
+    targetMemoryUtilization: 85
+  serviceAccount:
+    create: true
+    name: ""
+  database:
+    name: notification_db

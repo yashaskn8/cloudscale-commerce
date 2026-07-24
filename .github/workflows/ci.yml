@@ -1,0 +1,99 @@
+name: CloudScale Commerce CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v7
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+
+    - name: Install Linting Tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install ruff black mypy
+
+    - name: Run Ruff Linter
+      run: ruff check . --exclude 'shared/python/cloudscale_shared/grpc/*' --exclude '*/alembic/*'
+
+    - name: Run Black Formatter Check
+      run: black --check . --exclude '/(shared/python/cloudscale_shared/grpc|.*/alembic)/'
+
+    - name: Install Shared Package & Service Dependencies
+      run: |
+        pip install -e shared/python
+        for service in auth catalog inventory order payment notification; do
+          if [ -f services/$service/requirements.txt ]; then
+            pip install -r services/$service/requirements.txt
+          fi
+        done
+
+    - name: Run MyPy Type Check
+      run: mypy .
+
+    - name: Run Verification Compilations
+      run: |
+        python -m py_compile $(find . -name "*.py" -not -path "*/.*" -not -path "./.venv/*")
+
+  docker-build:
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v7
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v4
+
+    - name: Build Auth Service Image
+      uses: docker/build-push-action@v7
+      with:
+        context: .
+        file: services/auth/Dockerfile
+        push: false
+
+    - name: Build Catalog Service Image
+      uses: docker/build-push-action@v7
+      with:
+        context: .
+        file: services/catalog/Dockerfile
+        push: false
+
+    - name: Build Inventory Service Image
+      uses: docker/build-push-action@v7
+      with:
+        context: .
+        file: services/inventory/Dockerfile
+        push: false
+
+    - name: Build Order Service Image
+      uses: docker/build-push-action@v7
+      with:
+        context: .
+        file: services/order/Dockerfile
+        push: false
+
+    - name: Build Payment Service Image
+      uses: docker/build-push-action@v7
+      with:
+        context: .
+        file: services/payment/Dockerfile
+        push: false
+
+    - name: Build Notification Service Image
+      uses: docker/build-push-action@v7
+      with:
+        context: .
+        file: services/notification/Dockerfile
+        push: false

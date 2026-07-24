@@ -5,12 +5,13 @@ Uses transactional outbox — no direct Kafka dependency in the HTTP path.
 """
 
 import uuid
+from datetime import datetime
 
 import structlog
-from app.schemas import OrderCreate, OrderResponse
+from app.schemas import OrderAnalyticsResponse, OrderCreate, OrderResponse
 from app.service import OrderService
 from cloudscale_shared import ValidationException, get_db_session, get_redis_client
-from fastapi import APIRouter, Depends, Header, status
+from fastapi import APIRouter, Depends, Header, Query, status
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -47,6 +48,18 @@ async def create_order(
     )
     order = await service.create_order(user_uuid, payload)
     return OrderResponse.model_validate(order)
+
+
+@router.get("/analytics", response_model=OrderAnalyticsResponse)
+async def get_order_analytics(
+    from_date: datetime | None = Query(None, description="Optional start timestamp filter"),
+    to_date: datetime | None = Query(None, description="Optional end timestamp filter"),
+    status_filter: str | None = Query(None, alias="status", description="Optional order status filter"),
+    top_n: int = Query(10, ge=1, le=100, description="Top N items by sales volume"),
+    service: OrderService = Depends(get_order_service),
+) -> OrderAnalyticsResponse:
+    """Computes near-real-time order aggregate analytics (total orders, revenue, average order value, top items)."""
+    return await service.get_analytics(from_date, to_date, status_filter, top_n)
 
 
 @router.get("/{order_id}", response_model=OrderResponse)

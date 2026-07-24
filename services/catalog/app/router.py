@@ -88,3 +88,16 @@ async def create_product(
     """Create a new product in the catalog (Requires merchant or admin role)."""
     product = await service.create_product(payload)
     return ProductResponse.model_validate(product)
+
+
+@router.post(
+    "/bulk",
+    response_model=list[ProductResponse],
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(RoleChecker(["merchant", "admin"]))],
+)
+async def bulk_create_products(
+    payload: list[ProductCreate], service: CatalogService = Depends(get_catalog_service)
+) -> list[ProductResponse]:
+    """Bulk create catalog products in 500-item batch transactions (Requires merchant or admin role)."""
+    return cast(list[ProductResponse], await service.bulk_create_products(payload))

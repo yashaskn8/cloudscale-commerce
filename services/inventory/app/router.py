@@ -7,7 +7,7 @@ Integrates dependency-injected InventoryService.
 import uuid
 
 import structlog
-from app.schemas import InventoryResponse, RestockRequest
+from app.schemas import BatchReserveRequest, InventoryResponse, RestockRequest
 from app.service import InventoryService
 from cloudscale_shared import get_db_session, get_redis_client
 from cloudscale_shared.security import RoleChecker
@@ -46,3 +46,18 @@ async def restock(
     """Restocks inventory levels for a product (Requires merchant or admin role)."""
     inventory = await service.restock(product_id, payload)
     return InventoryResponse.model_validate(inventory)
+
+
+@router.post(
+    "/reserve-batch",
+    response_model=list[InventoryResponse],
+    dependencies=[Depends(RoleChecker(["merchant", "admin"]))],
+)
+async def reserve_batch(
+    payload: BatchReserveRequest, service: InventoryService = Depends(get_inventory_service)
+) -> list[InventoryResponse]:
+    """Atomically reserve stock for a batch of items with OCC retries (Requires merchant or admin role)."""
+    from app.schemas import BatchReserveRequest
+
+    results = await service.reserve_batch(payload.items)
+    return [InventoryResponse.model_validate(inv) for inv in results]

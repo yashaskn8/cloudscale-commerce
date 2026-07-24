@@ -30,7 +30,7 @@ setup: ## Install shared library and all service dependencies
 	$(PIP) install -e shared/python
 	@for svc in $(SERVICES); do \
 		echo "──── Installing $$svc dependencies ────"; \
-		$(PIP) install -e services/$$svc; \
+		$(PIP) install -r services/$$svc/requirements.txt; \
 	done
 
 # ── Testing ──────────────────────────────────────────────────────────────────
@@ -38,6 +38,7 @@ setup: ## Install shared library and all service dependencies
 
 export JWT_SECRET_KEY ?= test-secret-key-for-ci-only-32chars
 export STRIPE_WEBHOOK_SECRET ?= whsec_test_secret
+export OTEL_SDK_DISABLED ?= true
 
 test: ## Run pytest for all services
 	@failures=0; \

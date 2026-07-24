@@ -176,6 +176,21 @@ def decode_token(
         raise UnauthorizedException("Could not validate credentials")
 
 
+async def decode_and_verify_token(
+    token: str,
+    secret_key: str,
+    redis_client: Any | None = None,
+    algorithm: str = "HS256",
+    expected_type: str = "access",
+) -> dict[str, Any]:
+    """Decodes and validates a JWT token, verifying token revocation against Redis blacklist if redis_client is available."""
+    payload = decode_token(token, secret_key, algorithm=algorithm, expected_type=expected_type)
+    jti = payload.get("jti")
+    if jti and redis_client is not None and await is_token_revoked(redis_client, jti):
+        raise UnauthorizedException("Token has been revoked")
+    return payload
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Token Revocation (Redis-backed blacklist)
 # ──────────────────────────────────────────────────────────────────────────────

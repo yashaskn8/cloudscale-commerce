@@ -33,3 +33,16 @@ class OrderResponse(BaseModel):
     items: list[OrderItemResponse]
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class TopSellingItem(BaseModel):
+    product_id: uuid.UUID
+    total_quantity_sold: int
+
+
+class OrderAnalyticsResponse(BaseModel):
+    total_orders: int
+    total_revenue: Decimal
+    average_order_value: Decimal
+    status_breakdown: dict[str, int]
+    top_selling_items: list[TopSellingItem]

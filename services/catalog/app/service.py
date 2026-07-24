@@ -85,6 +85,43 @@ class CatalogService:
         logger.info("Product catalog item created", product_id=str(new_product.id), tenant_id=new_product.tenant_id)
         return new_product
 
+    async def bulk_create_products(self, items: list[ProductCreate], batch_size: int = 500) -> list[ProductResponse]:
+        """Creates products in batches with pre-validation and atomic batch rollback."""
+        tenant_id = get_current_tenant()
+        created_products: list[Product] = []
+
+        for i in range(0, len(items), batch_size):
+            batch = items[i : i + batch_size]
+
+            # Pre-validate batch items
+            for idx, item in enumerate(batch):
+                if not item.name or not item.sku or item.price < 0:
+                    raise ValidationException(f"Invalid product payload at batch index {i + idx}")
+
+            try:
+                async with self.session.begin_nested():
+                    for item in batch:
+                        if await self.repo.exists_by_sku(item.sku):
+                            raise ConflictException(f"SKU '{item.sku}' already exists")
+
+                        product = Product(
+                            sku=item.sku,
+                            name=item.name,
+                            description=item.description,
+                            price=item.price,
+                            is_active=True,
+                            tenant_id=tenant_id,
+                        )
+                        await self.repo.add(product)
+                        created_products.append(product)
+                    await self.session.flush()
+            except Exception:
+                await self.session.rollback()
+                raise
+
+        await self._invalidate_list_caches()
+        return [ProductResponse.model_validate(p) for p in created_products]
+
     async def get_product_by_id(self, product_id: uuid.UUID) -> ProductResponse:
         """Retrieves a product by ID, checking L1/L2 cache and circuit breaking database."""
         # Wrap database fetch with cache_aside using our shared wrapper
@@ -136,9 +173,8 @@ class CatalogService:
     # ──────────────────────────────────────────────────────────────────────────────
 
     async def _invalidate_list_caches(self) -> None:
-        """Evicts list pages from Redis cache."""
+        """Evicts list pages from Redis cache using O(1) version bumping."""
         try:
-            # Clear L1 local cache entries related to catalog_list
             from cloudscale_shared.cache import l1_cache
 
             l1_cache.clear()

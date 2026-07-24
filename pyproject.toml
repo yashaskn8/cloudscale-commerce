@@ -72,4 +72,10 @@ exclude = [
 [tool.pytest.ini_options]
 testpaths = ["services/*/tests"]
 asyncio_mode = "auto"
-addopts = "-v --tb=short"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "-v --tb=short -p no:phoenix"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+    "ignore::pytest.PytestDeprecationWarning",
+]

@@ -13,3 +13,12 @@ class InventoryResponse(BaseModel):
     reserved_stock: int
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class BatchReserveItem(BaseModel):
+    product_id: uuid.UUID
+    quantity: int = Field(..., gt=0)
+
+
+class BatchReserveRequest(BaseModel):
+    items: list[BatchReserveItem] = Field(..., min_length=1)

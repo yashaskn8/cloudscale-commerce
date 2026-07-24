@@ -18,6 +18,7 @@ from cloudscale_shared.exceptions import (
     ValidationException,
     setup_exception_handlers,
 )
+from cloudscale_shared.idempotency import IdempotencyManager, compute_request_fingerprint
 from cloudscale_shared.inbox import InboxMixin, inbox_already_processed, record_inbox
 from cloudscale_shared.logging import setup_logging
 from cloudscale_shared.metrics import register_health_routes, setup_metrics
@@ -33,6 +34,7 @@ from cloudscale_shared.security import (
     clear_failed_logins,
     create_token_pair,
     current_tenant_id,
+    decode_and_verify_token,
     decode_token,
     hash_password,
     is_account_locked,

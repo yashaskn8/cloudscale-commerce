@@ -8,10 +8,11 @@ Verifies:
 """
 
 import os
+
 import pytest
-from cloudscale_shared.security import create_token_pair, decode_token, current_tenant_id
 from cloudscale_shared.database import DatabaseSessionManager
-from cloudscale_shared.v2_postgresql_rls_migration import generate_rls_migration, TENANT_TABLES
+from cloudscale_shared.security import create_token_pair, current_tenant_id, decode_token
+from cloudscale_shared.v2_postgresql_rls_migration import TENANT_TABLES, generate_rls_migration
 
 
 def test_jwt_token_carries_tenant_id():

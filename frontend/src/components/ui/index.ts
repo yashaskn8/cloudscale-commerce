@@ -27,3 +27,6 @@ export { Chip } from "./Chip";
 export { Popover } from "./Popover";
 export { DatePicker } from "./DatePicker";
 export { SkipToContent } from "./SkipToContent";
+export { PageHeader } from "./PageHeader";
+export { MetricCard } from "./MetricCard";
+export { FilterBar } from "./FilterBar";

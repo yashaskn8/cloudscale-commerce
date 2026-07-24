@@ -24,7 +24,7 @@ import {
   Info,
   Calendar,
 } from "lucide-react";
-import { Button, Modal, Chip, Badge } from "@/components/ui";
+import { Button, Modal, Chip, Badge, MetricCard } from "@/components/ui";
 import { formatCurrency } from "@/lib/utils";
 import { motion } from "framer-motion";
 
@@ -207,71 +207,41 @@ export const Dashboard: React.FC = () => {
 
       {/* KPI Stats Widgets */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <motion.div
-          whileHover={{ y: -4 }}
+        <MetricCard
+          title="Total Spending"
+          value={formatCurrency(aggregates.totalSpend)}
+          subtitle="vs previous period"
+          trend={aggregates.growth}
+          trendPositive={true}
+          icon={<ShoppingCart className="h-6 w-6" />}
+          badgeText="Active"
+          badgeVariant="success"
           onClick={() => setDrillDownMetric("spending")}
-          className="bg-card hover:bg-card/85 p-6 rounded-2xl border shadow-sm cursor-pointer transition-colors space-y-4"
-        >
-          <div className="flex justify-between items-start">
-            <div className="p-3 bg-primary/10 text-primary rounded-xl">
-              <ShoppingCart className="h-6 w-6" />
-            </div>
-            <Badge variant="success" icon={<ArrowUpRight className="h-3 w-3" />}>
-              Active
-            </Badge>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Total Spending</p>
-            <h3 className="text-3xl font-extrabold mt-1">
-              {formatCurrency(aggregates.totalSpend)}
-            </h3>
-            <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
-              <span className="text-green-500 font-semibold">{aggregates.growth}</span> vs previous period
-            </p>
-          </div>
-        </motion.div>
+        />
 
-        <motion.div
-          whileHover={{ y: -4 }}
+        <MetricCard
+          title="Checkout Success"
+          value={aggregates.ordersCount}
+          subtitle="SLA transaction success rate"
+          trend="99.8%"
+          trendPositive={true}
+          icon={<Package className="h-6 w-6" />}
+          badgeText="Healthy"
+          badgeVariant="info"
           onClick={() => setDrillDownMetric("orders")}
-          className="bg-card hover:bg-card/85 p-6 rounded-2xl border shadow-sm cursor-pointer transition-colors space-y-4"
-        >
-          <div className="flex justify-between items-start">
-            <div className="p-3 bg-green-500/10 text-green-500 rounded-xl">
-              <Package className="h-6 w-6" />
-            </div>
-            <Badge variant="info">Healthy</Badge>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Checkout Success</p>
-            <h3 className="text-3xl font-extrabold mt-1">{aggregates.ordersCount}</h3>
-            <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
-              <span className="text-green-500 font-semibold">99.8%</span> SLA transaction success rate
-            </p>
-          </div>
-        </motion.div>
+        />
 
-        <motion.div
-          whileHover={{ y: -4 }}
+        <MetricCard
+          title="Refund Deductions"
+          value={formatCurrency(aggregates.totalRefund)}
+          subtitle="from gross spend"
+          trend={`-${((aggregates.totalRefund / (aggregates.totalSpend || 1)) * 100).toFixed(1)}%`}
+          trendPositive={false}
+          icon={<TrendingUp className="h-6 w-6" />}
+          badgeText="Controlled"
+          badgeVariant="warning"
           onClick={() => setDrillDownMetric("refunds")}
-          className="bg-card hover:bg-card/85 p-6 rounded-2xl border shadow-sm cursor-pointer transition-colors space-y-4"
-        >
-          <div className="flex justify-between items-start">
-            <div className="p-3 bg-amber-500/10 text-amber-500 rounded-xl">
-              <TrendingUp className="h-6 w-6" />
-            </div>
-            <Badge variant="warning">Controlled</Badge>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Refund Deductions</p>
-            <h3 className="text-3xl font-extrabold mt-1">
-              {formatCurrency(aggregates.totalRefund)}
-            </h3>
-            <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
-              <span className="text-amber-500 font-semibold">-{((aggregates.totalRefund / aggregates.totalSpend) * 100).toFixed(1)}%</span> from gross spend
-            </p>
-          </div>
-        </motion.div>
+        />
       </div>
 
       {/* Main Charts & Activity Panel */}

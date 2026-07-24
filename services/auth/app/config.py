@@ -1,3 +1,4 @@
+from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 
 
@@ -16,9 +17,7 @@ class Settings(BaseSettings):
     LOCKOUT_THRESHOLD: int = 5
     LOCKOUT_DURATION_SECONDS: int = 900
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = ConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 
 settings = Settings()

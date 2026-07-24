@@ -15,8 +15,8 @@ from decimal import Decimal
 import structlog
 from app.config import settings
 from app.models import Invoice, Subscription
-from cloudscale_shared import get_current_tenant, get_db_session
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from cloudscale_shared import cursor_paginate, get_current_tenant, get_db_session
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -137,12 +137,27 @@ async def update_subscription(plan_tier: str, db: AsyncSession = Depends(get_db_
 
 
 @router.get("/invoices")
-async def get_invoices(db: AsyncSession = Depends(get_db_session)):
-    """Retrieve billing invoices history for the current tenant."""
+async def get_invoices(
+    cursor: str | None = Query(default=None, description="Cursor for pagination (billing_date ISO string)"),
+    limit: int = Query(default=20, ge=1, le=100, description="Number of invoices per page"),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """Retrieve billing invoices history for the current tenant with cursor pagination."""
     tenant = get_current_tenant()
-    res = await db.execute(select(Invoice).where(Invoice.tenant_id == tenant))
-    invoices = res.scalars().all()
-    return invoices
+    stmt = select(Invoice).where(Invoice.tenant_id == tenant)
+    items, next_cursor = await cursor_paginate(
+        session=db,
+        query_base=stmt,
+        column=Invoice.billing_date,
+        cursor=cursor,
+        limit=limit,
+        descending=True,
+    )
+    return {
+        "items": items,
+        "next_cursor": str(next_cursor) if next_cursor else None,
+        "has_more": next_cursor is not None,
+    }
 
 
 @router.get("/entitlements")

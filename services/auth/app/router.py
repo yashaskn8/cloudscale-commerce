@@ -46,7 +46,12 @@ async def get_current_user(
 # ── Registration ──────────────────────────────────────────────────────────────
 
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register",
+    response_model=UserResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(RateLimiter(max_requests=10, window_seconds=60))],
+)
 async def register(
     payload: UserRegister,
     service: AuthService = Depends(get_auth_service),
@@ -78,7 +83,11 @@ async def login(
 # ── Token Refresh ─────────────────────────────────────────────────────────────
 
 
-@router.post("/refresh", response_model=TokenResponse)
+@router.post(
+    "/refresh",
+    response_model=TokenResponse,
+    dependencies=[Depends(RateLimiter(max_requests=10, window_seconds=60))],
+)
 async def refresh_tokens(
     payload: RefreshRequest,
     service: AuthService = Depends(get_auth_service),

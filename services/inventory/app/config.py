@@ -1,3 +1,4 @@
+from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 
 
@@ -11,9 +12,7 @@ class Settings(BaseSettings):
     INVENTORY_EVENTS_TOPIC: str = "inventory-events"
     PAYMENT_EVENTS_TOPIC: str = "payment-events"
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = ConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 
 settings = Settings()

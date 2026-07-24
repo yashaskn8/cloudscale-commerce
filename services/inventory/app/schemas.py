@@ -1,6 +1,6 @@
 import uuid
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class RestockRequest(BaseModel):
@@ -12,5 +12,4 @@ class InventoryResponse(BaseModel):
     available_stock: int
     reserved_stock: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

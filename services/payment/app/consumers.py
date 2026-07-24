@@ -9,6 +9,7 @@ for the documented extension point where stripe.PaymentIntent.create would be ca
 """
 
 import asyncio
+import time
 import uuid
 from typing import Any
 
@@ -19,11 +20,20 @@ from cloudscale_shared.database import db_manager
 from cloudscale_shared.events import Event, KafkaConsumerWrapper, KafkaProducerWrapper
 from cloudscale_shared.inbox import inbox_already_processed, record_inbox
 from cloudscale_shared.outbox import OutboxWorker, write_outbox
+from cloudscale_shared.resilience import CircuitBreaker, circuit_breaker, retry_with_backoff
+from prometheus_client import Counter, Histogram
 
 logger = structlog.get_logger()
 producer: KafkaProducerWrapper | None = None
 consumer: KafkaConsumerWrapper | None = None
 outbox_worker: OutboxWorker | None = None
+
+# Circuit Breaker for Payment DB Operations
+payment_db_breaker = CircuitBreaker("payment_db_consumer")
+
+# Prometheus Telemetry
+PAYMENT_PROCESSING_DURATION = Histogram("payment_consumer_processing_seconds", "Processing time for payment events")
+PAYMENT_CONSUMER_FAILURES = Counter("payment_consumer_failures_total", "Failures processing payment events")
 
 
 async def init_kafka():
@@ -75,6 +85,19 @@ async def handle_event(event: dict[str, Any]):
         correlation_id=correlation_id,
     )
 
+    start_time = time.perf_counter()
+    try:
+        await _process_event_with_resilience(event_type, event_id, correlation_id, payload)
+        PAYMENT_PROCESSING_DURATION.observe(time.perf_counter() - start_time)
+    except Exception as e:
+        PAYMENT_CONSUMER_FAILURES.inc()
+        logger.error("Error processing payment event", event_type=event_type, error=str(e))
+        raise
+
+
+@circuit_breaker(payment_db_breaker)
+@retry_with_backoff("payment_event_db_process", max_attempts=3)
+async def _process_event_with_resilience(event_type: str | None, event_id: str, correlation_id: str, payload: dict):
     async with db_manager.session() as db:
         # Inbox deduplication
         if await inbox_already_processed(db, InboxMessage, event_id):
@@ -87,7 +110,7 @@ async def handle_event(event: dict[str, Any]):
             return
 
         # Record to inbox
-        record_inbox(db, InboxMessage, event_id, event_type, "payment-consumer")
+        record_inbox(db, InboxMessage, event_id, event_type or "unknown", "payment-consumer")
 
 
 async def _process_payment(db, payload: dict[str, Any], correlation_id: str):
@@ -119,14 +142,17 @@ async def _process_payment(db, payload: dict[str, Any], correlation_id: str):
         simulated=True,
     )
 
-    # Determine mock failure: quantity = 99
-    should_fail = any(item.get("quantity") == 99 for item in items)
+    # Determine failure trigger: simulate_failure flag or legacy quantity==99 trigger
+    should_fail = (
+        payload.get("simulate_failure", False)
+        or any(item.get("simulate_failure", False) or item.get("quantity") == 99 for item in items)
+    )
 
     # Simulate processing delay
-    await asyncio.sleep(0.5)
+    await asyncio.sleep(0.1)
 
     if should_fail:
-        logger.warn("Simulated card payment failed", order_id=order_id)
+        logger.warn("Simulated card payment failed", order_id=order_id, correlation_id=correlation_id)
         failed_event = Event(
             event_type="PaymentFailedEvent",
             correlation_id=correlation_id,
@@ -150,4 +176,3 @@ async def _process_payment(db, payload: dict[str, Any], correlation_id: str):
             payload={"order_id": order_id, "items": items, "transaction_id": transaction_id},
         )
         write_outbox(db, OutboxMessage, settings.PAYMENT_EVENTS_TOPIC, success_event, key=order_id)
-

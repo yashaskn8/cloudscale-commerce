@@ -295,8 +295,9 @@ class RateLimiter:
                 count=current_count,
             )
             raise CloudScaleException(
+                message="Too many requests. Please try again later.",
+                code="RATE_LIMIT_EXCEEDED",
                 status_code=429,
-                detail="Too many requests. Please try again later.",
             )
 
 

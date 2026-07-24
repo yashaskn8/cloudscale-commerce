@@ -46,8 +46,8 @@ async def test_billing_subscription_flow(db_session):
             response = await ac.get("/api/v1/billing/invoices", headers={"X-Tenant-ID": "tenant-test-123"})
             assert response.status_code == 200
             invoices = response.json()
-            assert len(invoices) == 1
-            assert float(invoices[0]["amount"]) == 49.00
+            assert len(invoices["items"]) == 1
+            assert float(invoices["items"][0]["amount"]) == 49.00
 
     finally:
         tenant_id_context.reset(token)

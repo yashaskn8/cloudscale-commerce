@@ -10,12 +10,14 @@ import {
   TrendingUp,
   Tag,
   Package,
+  Upload,
 } from "lucide-react";
 import { useCartStore } from "@/stores/cartStore";
 import { useWishlistStore } from "@/stores/wishlistStore";
 import {
   Button,
   Drawer,
+  Modal,
   Badge,
   Chip,
   SearchBox,
@@ -54,6 +56,45 @@ export const Catalog: React.FC = () => {
   // Quick View State
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  // Bulk Import State
+  const [isBulkOpen, setIsBulkOpen] = useState(false);
+  const [bulkInput, setBulkInput] = useState(
+    JSON.stringify(
+      [
+        { sku: "SKU-BLK-101", name: "Enterprise Mechanical Keyboard", price: 149.99, description: "Tactile RGB gaming keyboard" },
+        { sku: "SKU-BLK-102", name: "Ergonomic Mesh Chair", price: 349.50, description: "Lumbar support executive desk chair" },
+      ],
+      null,
+      2
+    )
+  );
+  const [bulkSubmitting, setBulkSubmitting] = useState(false);
+
+  const handleBulkImport = async () => {
+    try {
+      setBulkSubmitting(true);
+      const parsed = JSON.parse(bulkInput);
+      if (!Array.isArray(parsed)) {
+        toast("Invalid Payload", { description: "Bulk import payload must be a JSON array of product objects.", variant: "warning" });
+        return;
+      }
+      const res = await apiClient.post("/api/v1/products/bulk", parsed);
+      toast("Bulk Import Completed", {
+        description: `Successfully imported ${res.data?.length || parsed.length} items into the catalog database.`,
+        variant: "success",
+      });
+      setIsBulkOpen(false);
+      fetchProducts();
+    } catch (err: any) {
+      toast("Import Error", {
+        description: err.response?.data?.detail || err.message || "Failed to bulk import products.",
+        variant: "info",
+      });
+    } finally {
+      setBulkSubmitting(false);
+    }
+  };
 
   // Mock Images Map to make products look beautiful
   const mockImages: Record<string, string[]> = {
@@ -216,6 +257,9 @@ export const Catalog: React.FC = () => {
             }}
           >
             Reset Filters
+          </Button>
+          <Button variant="outline" icon={<Upload className="h-4 w-4" />} onClick={() => setIsBulkOpen(true)}>
+            Bulk Import
           </Button>
           <Button variant="primary" icon={<Plus className="h-4 w-4" />}>
             Add Product
@@ -525,6 +569,42 @@ export const Catalog: React.FC = () => {
           </div>
         )}
       </Drawer>
+
+      {/* Bulk Product Import Modal */}
+      <Modal
+        open={isBulkOpen}
+        onClose={() => setIsBulkOpen(false)}
+        title="Batched Bulk Product Import"
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-muted-foreground">
+            Provide a JSON array of product objects containing <code>sku</code>, <code>name</code>, <code>price</code>, and optional <code>description</code>. Imported items execute in atomic 500-item transactions under backend validation.
+          </p>
+
+          <textarea
+            value={bulkInput}
+            onChange={(e) => setBulkInput(e.target.value)}
+            rows={10}
+            className="w-full font-mono text-xs p-3 rounded-xl border bg-muted focus:outline-none focus:ring-2 focus:ring-primary"
+            placeholder="Paste JSON array here..."
+          />
+
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => setIsBulkOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              loading={bulkSubmitting}
+              icon={<Upload className="h-4 w-4" />}
+              onClick={handleBulkImport}
+            >
+              Submit Batch Import
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

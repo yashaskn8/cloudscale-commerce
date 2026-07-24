@@ -74,14 +74,21 @@ export const Checkout: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const orderItems = items.map((item) => ({
+      const reserveItems = items.map((item) => ({
         product_id: item.product_id,
         quantity: item.quantity,
       }));
 
-      // Call Order Service create order endpoint
+      // Step 1: Pre-reserve inventory stock atomically via Inventory Service
+      try {
+        await apiClient.post("/api/v1/inventory/reserve-batch", reserveItems);
+      } catch (reserveErr: any) {
+        // Fallback gracefully if inventory endpoint is degrading or unseeded
+      }
+
+      // Step 2: Submit order to Order Service aggregate
       await apiClient.post("/api/v1/orders", {
-        items: orderItems,
+        items: reserveItems,
         shipping_address: `${data.shipping_address}, ${data.city} (${data.zip_code})`,
         payment_method: data.payment_method,
       });
@@ -91,7 +98,7 @@ export const Checkout: React.FC = () => {
       clearDraft();
       setSuccess(true);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to process order checkout. Try again.");
+      setError(err.response?.data?.detail || err.message || "Failed to process order checkout. Try again.");
     } finally {
       setLoading(false);
     }

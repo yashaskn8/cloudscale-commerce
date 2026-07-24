@@ -43,7 +43,7 @@ apiClient.interceptors.request.use(
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
     
-    // Inject consistent correlation header and CSRF validation headers
+    // Inject consistent correlation header, CSRF validation headers, and Idempotency key for mutating requests
     if (config.headers) {
       config.headers["X-Correlation-ID"] = observability.getCorrelationId();
       config.headers["X-CSRF-Token"] = getCSRFToken();
@@ -51,6 +51,14 @@ apiClient.interceptors.request.use(
       // Multi-tenant context propagation
       const { activeTenantId } = useTenantStore.getState();
       config.headers["X-Tenant-ID"] = activeTenantId;
+
+      // Auto-generate Idempotency-Key for state-mutating HTTP methods
+      const mutatingMethods = ["post", "put", "patch", "delete"];
+      if (config.method && mutatingMethods.includes(config.method.toLowerCase())) {
+        if (!config.headers["Idempotency-Key"]) {
+          config.headers["Idempotency-Key"] = crypto.randomUUID ? crypto.randomUUID() : `idemp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        }
+      }
     }
     
     // Track API trigger event

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { apiClient } from "@/lib/api-client";
 
 export interface User {
   id: string;
@@ -30,7 +31,11 @@ export const useAuthStore = create<AuthState>()(
         set({ user, accessToken, refreshToken, isAuthenticated: true }),
       setAccessToken: (accessToken) => set({ accessToken }),
       setUser: (user) => set({ user }),
-      logout: () => set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false }),
+      logout: () => {
+        // Trigger asynchronous server-side JWT revocation
+        apiClient.post("/api/v1/auth/logout").catch(() => {});
+        set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
+      },
     }),
     {
       name: "cloudscale-auth-store",

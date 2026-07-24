@@ -235,7 +235,7 @@ def set_tenant_context_sql(tenant_id: str) -> str:
             cursor.execute(set_tenant_context_sql(tenant_id))
             cursor.close()
     """
-    # Use parameterized setting to prevent SQL injection
+    # Note: Applies single-quote escaping for raw SQL string generation.
     safe_tenant = tenant_id.replace("'", "''")
     query = "SELECT set_config('app.current_tenant_id', '{safe_tenant}', true);"
     return query.replace("{safe_tenant}", safe_tenant)

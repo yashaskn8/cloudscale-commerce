@@ -75,13 +75,13 @@ class DatabaseSessionManager:
     async def write_session(self, tenant_id: str | None = None) -> AsyncIterator[AsyncSession]:
         """Provides transaction block on primary writable database instance.
 
-        If tenant_id is provided, sets the PostgreSQL session variable
+        If tenant_id is provided and the engine is PostgreSQL, sets the session variable
         'app.current_tenant_id' via SET LOCAL so RLS policies filter by tenant.
         """
         DB_CONNECTIONS_ACTIVE.labels(service=self.service_name, type="write").inc()
         session = self._write_sessionmaker()
         try:
-            if tenant_id:
+            if tenant_id and self._write_engine.dialect.name == "postgresql":
                 await session.execute(
                     text("SELECT set_config('app.current_tenant_id', :tid, true)"),
                     {"tid": tenant_id},
@@ -99,13 +99,13 @@ class DatabaseSessionManager:
     async def read_session(self, tenant_id: str | None = None) -> AsyncIterator[AsyncSession]:
         """Provides query-only block routing queries to the read replica.
 
-        If tenant_id is provided, sets the PostgreSQL session variable
+        If tenant_id is provided and the engine is PostgreSQL, sets the session variable
         'app.current_tenant_id' via SET LOCAL so RLS policies filter by tenant.
         """
         DB_CONNECTIONS_ACTIVE.labels(service=self.service_name, type="read").inc()
         session = self._read_sessionmaker()
         try:
-            if tenant_id:
+            if tenant_id and self._read_engine.dialect.name == "postgresql":
                 await session.execute(
                     text("SELECT set_config('app.current_tenant_id', :tid, true)"),
                     {"tid": tenant_id},

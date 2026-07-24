@@ -128,7 +128,9 @@ class RedisManager:
 
     def __init__(self, url: str):
         self.pool = ConnectionPool.from_url(
-            url, decode_responses=True, max_connections=50  # Increased for higher load profiles
+            url,
+            decode_responses=True,
+            max_connections=50,  # Increased for higher load profiles
         )
 
     async def close(self) -> None:

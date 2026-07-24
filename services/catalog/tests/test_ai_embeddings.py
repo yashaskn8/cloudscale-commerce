@@ -129,9 +129,9 @@ class TestEmbeddingEngine:
         sim_expanded = EmbeddingEngine.cosine_similarity(vec_query_expanded, vec_winter)
         sim_plain = EmbeddingEngine.cosine_similarity(vec_query_plain, vec_winter)
 
-        assert (
-            sim_expanded > sim_plain
-        ), f"Expanded query should match better: expanded={sim_expanded:.4f} vs plain={sim_plain:.4f}"
+        assert sim_expanded > sim_plain, (
+            f"Expanded query should match better: expanded={sim_expanded:.4f} vs plain={sim_plain:.4f}"
+        )
 
     def test_deterministic_embeddings(self):
         """Same input should always produce same embedding."""

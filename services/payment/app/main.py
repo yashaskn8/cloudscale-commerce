@@ -27,9 +27,11 @@ async def lifespan(app: FastAPI):
     init_db(settings.DATABASE_URL)
 
     import os
+
     if os.getenv("RUN_MIGRATIONS", "false").lower() == "true":
         from app.models import Base
         from cloudscale_shared.database import db_manager
+
         if db_manager:
             async with db_manager._write_engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)

@@ -45,7 +45,9 @@ SAGA_SWEEPS_TOTAL = Counter("saga_sweeps_total", "Total saga timeout sweep execu
 SAGA_TIMEOUT_TOTAL = Counter("saga_timeout_total", "Total stale orders timed out by sweeper")
 STALE_ORDERS_FOUND = Gauge("stale_orders_found", "Current count of stale pending/reserved orders")
 SAGA_SWEEP_DURATION = Histogram("saga_sweep_duration_seconds", "Duration of saga timeout sweep loop")
-CONSUMER_PROCESSING_DURATION = Histogram("order_consumer_processing_seconds", "Processing time for order events", ["event_type"])
+CONSUMER_PROCESSING_DURATION = Histogram(
+    "order_consumer_processing_seconds", "Processing time for order events", ["event_type"]
+)
 CONSUMER_FAILURES = Counter("order_consumer_failures_total", "Failures processing order events", ["event_type"])
 
 

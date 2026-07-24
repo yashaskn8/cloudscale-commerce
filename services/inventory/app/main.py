@@ -29,6 +29,7 @@ async def lifespan(app: FastAPI):
     init_redis(settings.REDIS_URL)
 
     import os
+
     if os.getenv("RUN_MIGRATIONS", "false").lower() == "true":
         logger.info("Running database migrations via Alembic...")
         import asyncio
@@ -37,6 +38,7 @@ async def lifespan(app: FastAPI):
         from alembic.config import Config
 
         loop = asyncio.get_event_loop()
+
         def run_alembic():
             alembic_cfg = Config("alembic.ini")
             command.upgrade(alembic_cfg, "head")

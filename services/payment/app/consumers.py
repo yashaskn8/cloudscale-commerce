@@ -124,14 +124,12 @@ async def _process_payment(db, payload: dict[str, Any], correlation_id: str):
     if not settings.SIMULATE_PAYMENTS:
         # ── Real Stripe integration path (TODO: wire stripe.PaymentIntent.create) ──
         logger.error(
-            "Real payment processing is not yet implemented. "
-            "Set SIMULATE_PAYMENTS=True for development/staging.",
+            "Real payment processing is not yet implemented. Set SIMULATE_PAYMENTS=True for development/staging.",
             order_id=order_id,
             amount=amount,
         )
         raise NotImplementedError(
-            "Real Stripe payment processing is not yet wired. "
-            "Set SIMULATE_PAYMENTS=True to use the mock payment flow."
+            "Real Stripe payment processing is not yet wired. Set SIMULATE_PAYMENTS=True to use the mock payment flow."
         )
 
     # ── Simulated payment path ──────────────────────────────────────────────
@@ -143,9 +141,7 @@ async def _process_payment(db, payload: dict[str, Any], correlation_id: str):
     )
 
     # Determine failure trigger via explicit simulate_failure flag only
-    should_fail = payload.get("simulate_failure", False) or any(
-        item.get("simulate_failure", False) for item in items
-    )
+    should_fail = payload.get("simulate_failure", False) or any(item.get("simulate_failure", False) for item in items)
 
     # Simulate processing delay
     await asyncio.sleep(0.1)

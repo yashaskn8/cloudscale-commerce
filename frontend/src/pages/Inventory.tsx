@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { apiClient } from "@/lib/api-client";
 import { AlertTriangle, RefreshCw, CheckCircle2 } from "lucide-react";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { DataTable } from "@/components/data/DataTable";
 import type { DataColumn } from "@/components/data/DataTable";
-import { Badge, Button, Input, Modal, ModalFooter } from "@/components/ui";
+import { Badge, Button, Input, Modal, ModalFooter, PageHeader, Alert } from "@/components/ui";
 import { useTranslation } from "@/i18n";
 
 interface InventoryItem {
@@ -24,20 +24,22 @@ export const Inventory: React.FC = () => {
   const [restockQty, setRestockQty] = useState(10);
   const [updating, setUpdating] = useState(false);
 
-  const fetchInventory = async () => {
+  const fetchInventory = useCallback(async () => {
     try {
+      setLoading(true);
+      setError(null);
       const res = await apiClient.get("/api/v1/inventory");
       setItems(res.data || []);
-    } catch (err: any) {
+    } catch {
       setError(t("common.error"));
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
 
   useEffect(() => {
     fetchInventory();
-  }, []);
+  }, [fetchInventory]);
 
   const handleRestock = async () => {
     if (!selectedItem) return;
@@ -51,8 +53,8 @@ export const Inventory: React.FC = () => {
       addNotification("Stock Updated", `Successfully restocked SKU: ${selectedItem.sku} by ${restockQty}.`, "inventory");
       setSelectedItem(null);
       await fetchInventory();
-    } catch (err: any) {
-      alert("Failed to restock inventory item.");
+    } catch {
+      addNotification("Restock Failed", "Failed to restock inventory item. Please try again.", "inventory");
     } finally {
       setUpdating(false);
     }
@@ -112,17 +114,30 @@ export const Inventory: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t("inventory.title")}</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Monitor warehouse stock balances, item reservations, and low stock warnings
-        </p>
-      </div>
+      <PageHeader
+        title={t("inventory.title")}
+        subtitle="Monitor warehouse stock balances, item reservations, and low stock warnings"
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            icon={<RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />}
+            onClick={fetchInventory}
+          >
+            Refresh
+          </Button>
+        }
+      />
 
       {error ? (
-        <div className="p-4 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 rounded-lg">
-          {error}
-        </div>
+        <Alert variant="error">
+          <div className="flex items-center justify-between">
+            <span>{error}</span>
+            <Button variant="outline" size="sm" onClick={fetchInventory}>
+              Retry
+            </Button>
+          </div>
+        </Alert>
       ) : (
         <DataTable
           columns={columns}
@@ -164,4 +179,3 @@ export const Inventory: React.FC = () => {
 };
 
 export default Inventory;
-

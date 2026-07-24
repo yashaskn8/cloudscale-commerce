@@ -18,15 +18,13 @@ import {
   TrendingUp,
   Package,
   Clock,
-  ArrowUpRight,
   Download,
   RefreshCw,
   Info,
   Calendar,
 } from "lucide-react";
-import { Button, Modal, Chip, Badge, MetricCard } from "@/components/ui";
+import { Button, Modal, Chip, MetricCard } from "@/components/ui";
 import { formatCurrency } from "@/lib/utils";
-import { motion } from "framer-motion";
 
 // Spending and Sales dataset variations
 const mockDatasets: Record<string, { month: string; spend: number; refund: number }[]> = {

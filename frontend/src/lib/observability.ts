@@ -11,6 +11,26 @@ class ObservabilityManager {
   constructor() {
     this.generateCorrelationId();
     this.setupWebVitals();
+    this.setupGlobalHandlers();
+  }
+
+  private setupGlobalHandlers() {
+    if (typeof window === "undefined") return;
+
+    // Capture unhandled promise rejections
+    window.addEventListener("unhandledrejection", (event) => {
+      const error = event.reason instanceof Error
+        ? event.reason
+        : new Error(String(event.reason));
+      this.logError(error, { type: "unhandled-promise-rejection" });
+    });
+
+    // Capture uncaught errors
+    window.addEventListener("error", (event) => {
+      if (event.error) {
+        this.logError(event.error, { type: "uncaught-error", filename: event.filename, lineno: event.lineno });
+      }
+    });
   }
 
   private generateCorrelationId() {

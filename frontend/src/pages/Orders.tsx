@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { apiClient } from "@/lib/api-client";
 import { useTranslation } from "@/i18n";
 import { DataTable } from "@/components/data/DataTable";
 import type { DataColumn } from "@/components/data/DataTable";
-import { Badge } from "@/components/ui";
+import { Badge, PageHeader, Button, Alert } from "@/components/ui";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { RefreshCw } from "lucide-react";
 
 interface Order {
   id: string;
@@ -19,19 +20,22 @@ export const Orders: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const res = await apiClient.get("/api/v1/orders");
-        setOrders(res.data || []);
-      } catch (err: any) {
-        setError(t("common.error"));
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchOrders();
+  const fetchOrders = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await apiClient.get("/api/v1/orders");
+      setOrders(res.data || []);
+    } catch {
+      setError(t("common.error"));
+    } finally {
+      setLoading(false);
+    }
   }, [t]);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
 
   const columns: DataColumn<Order>[] = [
     {
@@ -75,17 +79,30 @@ export const Orders: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t("orders.title")}</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Review details of your transactions and checkout saga states
-        </p>
-      </div>
+      <PageHeader
+        title={t("orders.title")}
+        subtitle="Review details of your transactions and checkout saga states"
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            icon={<RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />}
+            onClick={fetchOrders}
+          >
+            Refresh
+          </Button>
+        }
+      />
 
       {error ? (
-        <div className="p-4 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 rounded-lg">
-          {error}
-        </div>
+        <Alert variant="error">
+          <div className="flex items-center justify-between">
+            <span>{error}</span>
+            <Button variant="outline" size="sm" onClick={fetchOrders}>
+              Retry
+            </Button>
+          </div>
+        </Alert>
       ) : (
         <DataTable
           columns={columns}
@@ -102,4 +119,3 @@ export const Orders: React.FC = () => {
 };
 
 export default Orders;
-

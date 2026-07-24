@@ -62,7 +62,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <Select
             options={sortOptions}
             value={selectedSort || sortOptions[0]?.value}
-            onChange={(val) => onSortChange(val)}
+            onChange={(e) => onSortChange(e.target.value)}
             className="w-40"
           />
         )}

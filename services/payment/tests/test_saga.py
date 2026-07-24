@@ -62,14 +62,15 @@ async def test_payment_processing_failure_rollback_path(db_session: AsyncSession
     order_id = uuid.uuid4()
     correlation_id = "test-corr-payment-fail"
 
-    # Simulate InventoryReservedEvent with quantity = 99 (triggers mock decline)
+    # Simulate InventoryReservedEvent with simulate_failure flag to trigger decline
     inventory_reserved_event = {
         "event_id": str(uuid.uuid4()),
         "event_type": "InventoryReservedEvent",
         "correlation_id": correlation_id,
         "payload": {
             "order_id": str(order_id),
-            "items": [{"product_id": str(product_id), "quantity": 99, "unit_price": 1.00}],
+            "simulate_failure": True,
+            "items": [{"product_id": str(product_id), "quantity": 2, "unit_price": 1.00}],
         },
     }
 

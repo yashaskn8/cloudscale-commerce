@@ -34,6 +34,10 @@ setup: ## Install shared library and all service dependencies
 	done
 
 # ── Testing ──────────────────────────────────────────────────────────────────
+# Required env vars are exported automatically so tests pass on clean checkouts.
+
+export JWT_SECRET_KEY ?= test-secret-key-for-ci-only-32chars
+export STRIPE_WEBHOOK_SECRET ?= whsec_test_secret
 
 test: ## Run pytest for all services
 	@failures=0; \

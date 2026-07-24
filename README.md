@@ -105,23 +105,34 @@ Spins up PostgreSQL instances, Apache Kafka, Redis, and all microservices:
 docker compose up -d --build
 ```
 
-### 2. Install Shared Library & Run Tests
+### 2. Environment Setup
+Some services require environment variables. Copy the example files or export them manually:
+```bash
+# Option A: Copy .env.example files (auth and payment have required secrets)
+cp services/auth/.env.example services/auth/.env
+cp services/payment/.env.example services/payment/.env
+
+# Option B: Export directly for quick testing
+export JWT_SECRET_KEY="your-secret-key-min-32-chars-long"
+export STRIPE_WEBHOOK_SECRET="whsec_test_secret"
+```
+> **Note**: Without `JWT_SECRET_KEY`, auth service tests will fail with `pydantic.ValidationError`.
+
+### 3. Install Shared Library & Run Tests
 ```bash
 # Install the shared Python package (required before running any service tests)
 pip install -e ./shared/python
 
-# Install test dependencies
-pip install pytest pytest-asyncio httpx
+# Run ALL service tests with a single command (recommended)
+make test
 
-# Execute individual service tests
-PYTHONPATH=services/auth pytest services/auth/tests/
-PYTHONPATH=services/catalog pytest services/catalog/tests/
-PYTHONPATH=services/inventory pytest services/inventory/tests/
-PYTHONPATH=services/order pytest services/order/tests/
-PYTHONPATH=services/payment pytest services/payment/tests/
+# Or run a single service's tests
+make test-auth
+make test-order
 
-# Execute system-wide functional smoke tests
-pytest tests/smoke/
+# Or run manually with required env vars
+JWT_SECRET_KEY=test-secret-key-for-ci-32chars \
+  PYTHONPATH=services/auth pytest services/auth/tests/
 ```
 
 ---

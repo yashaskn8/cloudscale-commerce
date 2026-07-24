@@ -142,10 +142,9 @@ async def _process_payment(db, payload: dict[str, Any], correlation_id: str):
         simulated=True,
     )
 
-    # Determine failure trigger: simulate_failure flag or legacy quantity==99 trigger
-    should_fail = (
-        payload.get("simulate_failure", False)
-        or any(item.get("simulate_failure", False) or item.get("quantity") == 99 for item in items)
+    # Determine failure trigger via explicit simulate_failure flag only
+    should_fail = payload.get("simulate_failure", False) or any(
+        item.get("simulate_failure", False) for item in items
     )
 
     # Simulate processing delay

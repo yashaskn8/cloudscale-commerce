@@ -1,14 +1,10 @@
 # CloudScale Commerce
 
-[![CI/CD Validation](https://github.com/yashaskn8/cloudscale-commerce/actions/workflows/pr-validation.yml/badge.svg)](https://github.com/yashaskn8/cloudscale-commerce/actions/workflows/pr-validation.yml)
-[![DevSecOps Security Scan](https://github.com/yashaskn8/cloudscale-commerce/actions/workflows/security-devsecops.yml/badge.svg)](https://github.com/yashaskn8/cloudscale-commerce/actions/workflows/security-devsecops.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 CloudScale Commerce is an event-driven, multi-tenant e-commerce microservices platform built with **Python 3.12 (FastAPI)**, **PostgreSQL**, **Apache Kafka**, **Redis**, and **Kubernetes (Helm)**.
 
 The project demonstrates distributed system design patterns including the Transactional Outbox/Inbox pattern, Choreographed Sagas for distributed checkouts, PostgreSQL Row-Level Security (RLS) for tenant isolation, and version-based Optimistic Concurrency Control.
 
----
 
 ## Architecture Overview
 
